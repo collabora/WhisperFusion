@@ -1,0 +1,4 @@
+PyAudio
+faster-whisper==0.9.0
+websockets
+onnxruntime==1.16.0
