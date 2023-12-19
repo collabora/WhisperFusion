@@ -339,9 +339,9 @@ def decode_wav_file(
 
 if __name__=="__main__":
     tensorrt_llm.logger.set_level("error")
-    model = WhisperTRTLLM("../whisper_small_en", False, "../assets", device="cuda")
+    model = WhisperTRTLLM("/root/TensorRT-LLM/examples/whisper/whisper_small_en", False, "../assets", device="cuda")
     mel, total_duration = model.log_mel_spectrogram(
-        "/root/Code/outputs/output3.wav",
+        "../assets/1221-135766-0002.wav",
     )
     results = model.transcribe(mel)
     print(results, total_duration)

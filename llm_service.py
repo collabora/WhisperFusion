@@ -103,6 +103,7 @@ class MistralTensorRTLLM:
                          rank=self.runtime_rank,
                          debug_mode=False,
                          lora_ckpt_source='hf')
+        self.runner = self.runner_cls.from_dir(**self.runner_kwargs)
 
     def parse_input(
         self,
@@ -152,75 +153,83 @@ class MistralTensorRTLLM:
                 output.append(output_text)
         return output
     
-    def __call__(
-        self, 
-        input_text, 
-        max_output_len=100, 
+    def run(
+        self,
+        transcription_queue=None,
+        llm_queue=None,
+        input_text=None, 
+        max_output_len=20, 
         max_attention_window_size=4096, 
         num_beams=1, 
         streaming=True,
         streaming_interval=4,
+        debug=False,
     ):
-        import time
-        start = time.time()
-        batch_input_ids = self.parse_input(
-            input_text=input_text,
-            add_special_tokens=True,
-            max_input_length=923,
-            pad_id=None,
+        self.initialize_model(
+        "/root/TensorRT-LLM/examples/llama/tmp/mistral/7B/trt_engines/fp16/1-gpu",
+        "teknium/OpenHermes-2.5-Mistral-7B",
         )
+        print("Loaded LLM...")
+        while True:
+ 
+            # while transcription
+            transcription_output = transcription_queue.get()
+            input_text=transcription_output['prompt'].strip()
+            
+            print("Whisper: ", input_text)
+            batch_input_ids = self.parse_input(
+                input_text=input_text,
+                add_special_tokens=True,
+                max_input_length=923,
+                pad_id=None,
+            )
 
-        input_lengths = [x.size(1) for x in batch_input_ids]
-        print(self.runner_kwargs)
-        runner = self.runner_cls.from_dir(**self.runner_kwargs)
-        with torch.no_grad():
-            outputs = runner.generate(
-                batch_input_ids,
-                max_new_tokens=max_output_len,
-                max_attention_window_size=max_attention_window_size,
-                end_id=self.end_id,
-                pad_id=self.pad_id,
-                temperature=1.0,
-                top_k=1,
-                top_p=0.0,
-                num_beams=num_beams,
-                length_penalty=1.0,
-                repetition_penalty=1.0,
-                stop_words_list=None,
-                bad_words_list=None,
-                lora_uids=None,
-                prompt_table_path=None,
-                prompt_tasks=None,
-                streaming=streaming,
-                output_sequence_lengths=True,
-                return_dict=True)
-            torch.cuda.synchronize()
-        print(outputs)
-        if streaming:
-            for curr_outputs in throttle_generator(outputs, streaming_interval):
-                output_ids = curr_outputs['output_ids']
-                sequence_lengths = curr_outputs['sequence_lengths']
+            input_lengths = [x.size(1) for x in batch_input_ids]
+            with torch.no_grad():
+                outputs = self.runner.generate(
+                    batch_input_ids,
+                    max_new_tokens=max_output_len,
+                    max_attention_window_size=max_attention_window_size,
+                    end_id=self.end_id,
+                    pad_id=self.pad_id,
+                    temperature=1.0,
+                    top_k=1,
+                    top_p=0.0,
+                    num_beams=num_beams,
+                    length_penalty=1.0,
+                    repetition_penalty=1.0,
+                    stop_words_list=None,
+                    bad_words_list=None,
+                    lora_uids=None,
+                    prompt_table_path=None,
+                    prompt_tasks=None,
+                    streaming=streaming,
+                    output_sequence_lengths=True,
+                    return_dict=True)
+                torch.cuda.synchronize()
+            if streaming:
+                for curr_outputs in throttle_generator(outputs, streaming_interval):
+                    output_ids = curr_outputs['output_ids']
+                    sequence_lengths = curr_outputs['sequence_lengths']
+                    output = self.decode_tokens(
+                        output_ids,
+                        input_lengths,
+                        sequence_lengths
+                    )
+            else:
+                output_ids = outputs['output_ids']
+                sequence_lengths = outputs['sequence_lengths']
+                context_logits = None
+                generation_logits = None
+                if runner.gather_all_token_logits:
+                    context_logits = outputs['context_logits']
+                    generation_logits = outputs['generation_logits']
                 output = self.decode_tokens(
                     output_ids,
                     input_lengths,
-                    sequence_lengths
+                    sequence_lengths,
                 )
-                print(time.time() - start)
-                print(input_text[0] + " " + output[0])
-        else:
-            output_ids = outputs['output_ids']
-            sequence_lengths = outputs['sequence_lengths']
-            context_logits = None
-            generation_logits = None
-            if runner.gather_all_token_logits:
-                context_logits = outputs['context_logits']
-                generation_logits = outputs['generation_logits']
-            output = self.decode_tokens(
-                output_ids,
-                input_lengths,
-                sequence_lengths,
-            )
-        return output
+            llm_queue.put({"uid": transcription_output["uid"], "llm_output": output})
 
 
 if __name__=="__main__":

@@ -12,6 +12,8 @@ from websockets.sync.server import serve
 import torch
 import numpy as np
 import time
+import queue
+
 from whisper_live.vad import VoiceActivityDetection
 from whisper_live.trt_transcriber import WhisperTRTLLM
 
@@ -47,13 +49,13 @@ class TranscriptionServer:
 
     def __init__(self):
         # voice activity detection model
-        self.vad_model = VoiceActivityDetection()
-        self.vad_threshold = 0.5
+        
         self.clients = {}
         self.websockets = {}
         self.clients_start_time = {}
         self.max_clients = 4
         self.max_connection_time = 600
+        print("done loading")
 
     def get_wait_time(self):
         """
@@ -72,7 +74,7 @@ class TranscriptionServer:
 
         return wait_time / 60
 
-    def recv_audio(self, websocket):
+    def recv_audio(self, websocket, transcription_queue=None, llm_queue=None):
         """
         Receive audio chunks from a client in an infinite loop.
         
@@ -93,6 +95,9 @@ class TranscriptionServer:
         Raises:
             Exception: If there is an error during the audio frame processing.
         """
+        self.vad_model = VoiceActivityDetection()
+        self.vad_threshold = 0.5
+
         logging.info("New client connected")
         options = websocket.recv()
         options = json.loads(options)
@@ -115,22 +120,26 @@ class TranscriptionServer:
             multilingual=options["multilingual"],
             language=options["language"],
             task=options["task"],
-            client_uid=options["uid"]
+            client_uid=options["uid"],
+            transcription_queue=transcription_queue,
+            llm_queue=llm_queue
         )
 
         self.clients[websocket] = client
         self.clients_start_time[websocket] = time.time()
         no_voice_activity_chunks = 0
+        print()
         while True:
             try:
                 frame_data = websocket.recv()
                 frame_np = np.frombuffer(frame_data, dtype=np.float32)
+                print(frame_np.shape)
                 # VAD
                 try:
                     speech_prob = self.vad_model(torch.from_numpy(frame_np.copy()), self.RATE).item()
                     if speech_prob < self.vad_threshold:
                         no_voice_activity_chunks += 1
-                        print("No speech", no_voice_activity_chunks)
+                        print("No speech", no_voice_activity_chunks, self.clients[websocket].eos)
                         if no_voice_activity_chunks > 2:
                             if not self.clients[websocket].eos:
                                 self.clients[websocket].set_eos(True)
@@ -164,7 +173,7 @@ class TranscriptionServer:
                 del websocket
                 break
 
-    def run(self, host, port=9090):
+    def run(self, host, port=9090, transcription_queue=None, llm_queue=None):
         """
         Run the transcription server.
 
@@ -172,7 +181,15 @@ class TranscriptionServer:
             host (str): The host address to bind the server.
             port (int): The port number to bind the server.
         """
-        with serve(self.recv_audio, host, port) as server:
+        with serve(
+            functools.partial(
+                self.recv_audio, 
+                transcription_queue=transcription_queue, 
+                llm_queue=llm_queue,
+            ),
+            host,
+            port
+        ) as server:
             server.serve_forever()
 
 
@@ -209,7 +226,17 @@ class ServeClient:
     SERVER_READY = "SERVER_READY"
     DISCONNECT = "DISCONNECT"
 
-    def __init__(self, websocket, task="transcribe", device=None, multilingual=False, language=None, client_uid=None):
+    def __init__(
+        self,
+        websocket,
+        task="transcribe",
+        device=None,
+        multilingual=False,
+        language=None, 
+        client_uid=None,
+        transcription_queue=None,
+        llm_queue=None,
+        ):
         """
         Initialize a ServeClient instance.
         The Whisper model is initialized based on the client's language and device availability.
@@ -226,6 +253,8 @@ class ServeClient:
 
         """
         self.client_uid = client_uid
+        self.transcription_queue = transcription_queue
+        self.llm_queue = llm_queue
         self.data = b""
         self.frames = b""
         self.language = language if multilingual else "en"
@@ -246,6 +275,7 @@ class ServeClient:
         self.show_prev_out_thresh = 5   # if pause(no output from whisper) show previous output for 5 seconds
         self.add_pause_thresh = 3       # add a blank to segment list as a pause(no speech) for 3 seconds
         self.transcript = []
+        self.prompt = None
         self.send_last_n_segments = 10
 
         # text formatting
@@ -318,6 +348,14 @@ class ServeClient:
 
         """
         while True:
+            try:
+                if self.llm_queue is not None:
+                    llm_output = self.llm_queue.get_nowait()
+                    if llm_output:
+                        self.websocket.send(json.dumps(llm_output))
+            except queue.Empty:
+                pass
+            
             if self.exit:
                 logging.info("Exiting speech to text thread")
                 break
@@ -334,28 +372,39 @@ class ServeClient:
             samples_take = max(0, (self.timestamp_offset - self.frames_offset)*self.RATE)
             input_bytes = self.frames_np[int(samples_take):].copy()
             duration = input_bytes.shape[0] / self.RATE
-            if duration<1.0 or not self.eos:
+            if duration<1.0:
                 continue
 
             try:
                 input_sample = input_bytes.copy()
-                save_wav(input_sample)
+                # save_wav(input_sample)
                 # whisper transcribe with prompt
                 mel, duration = self.transcriber.log_mel_spectrogram(input_sample)
-                print(mel.shape, duration)
-                result = self.transcriber.transcribe(mel)
-                self.append_segment(result)
-                self.set_eos(False)
-                self.timestamp_offset += duration
-                if len(result):
-                    segments = self.transcript[-self.send_last_n_segments:]
+                last_segment = self.transcriber.transcribe(mel)
+                
+                if len(last_segment):
+                    if len(self.transcript) < self.send_last_n_segments:
+                        segments = self.transcript
+                    else:
+                        segments = self.transcript[-self.send_last_n_segments:]
+                    segments.append({"text": last_segment})
                     try:
+                        print(f"Sending... {segments}")
                         self.websocket.send(
                             json.dumps({
                                 "uid": self.client_uid,
-                                "segments": segments
+                                "segments": segments,
+                                "eos": self.eos
                             })
                         )
+                        if self.eos:
+                            self.append_segment(last_segment)
+                            self.timestamp_offset += duration
+                            self.prompt = ' '.join(segment['text'] for segment in segments)
+                            self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
+                            self.transcript = []
+                            self.set_eos(False)
+
                     except Exception as e:
                         logging.error(f"[ERROR]: {e}")
 
@@ -364,6 +413,7 @@ class ServeClient:
                 time.sleep(0.01)
     
     def append_segment(self, result):
+        print("adding to trasncript: ", result)
         if not len(self.transcript):
             self.transcript.append({"text": result + " "})
         else:
