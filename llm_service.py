@@ -174,7 +174,8 @@ class MistralTensorRTLLM:
  
             # while transcription
             transcription_output = transcription_queue.get()
-            input_text=transcription_output['prompt'].strip()
+            if not debug:
+                input_text=[transcription_output['prompt'].strip()]
             
             print("Whisper: ", input_text)
             batch_input_ids = self.parse_input(

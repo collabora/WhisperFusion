@@ -11,7 +11,6 @@ from websockets.sync.server import serve
 
 import torch
 import numpy as np
-import time
 import queue
 
 from whisper_live.vad import VoiceActivityDetection
@@ -133,13 +132,13 @@ class TranscriptionServer:
             try:
                 frame_data = websocket.recv()
                 frame_np = np.frombuffer(frame_data, dtype=np.float32)
-                print(frame_np.shape)
+                # print(frame_np.shape)
                 # VAD
                 try:
                     speech_prob = self.vad_model(torch.from_numpy(frame_np.copy()), self.RATE).item()
                     if speech_prob < self.vad_threshold:
                         no_voice_activity_chunks += 1
-                        print("No speech", no_voice_activity_chunks, self.clients[websocket].eos)
+                        # print("No speech", no_voice_activity_chunks, self.clients[websocket].eos)
                         if no_voice_activity_chunks > 2:
                             if not self.clients[websocket].eos:
                                 self.clients[websocket].set_eos(True)
@@ -182,11 +181,7 @@ class TranscriptionServer:
             port (int): The port number to bind the server.
         """
         with serve(
-            functools.partial(
-                self.recv_audio, 
-                transcription_queue=transcription_queue, 
-                llm_queue=llm_queue,
-            ),
+            functools.partial(self.recv_audio, transcription_queue=transcription_queue,  llm_queue=llm_queue),
             host,
             port
         ) as server:
@@ -288,6 +283,7 @@ class ServeClient:
         self.eos = False
         self.trans_thread = threading.Thread(target=self.speech_to_text)
         self.trans_thread.start()
+
         self.websocket.send(
             json.dumps(
                 {
@@ -349,10 +345,13 @@ class ServeClient:
         """
         while True:
             try:
+                start = time.time()
                 if self.llm_queue is not None:
                     llm_output = self.llm_queue.get_nowait()
                     if llm_output:
                         self.websocket.send(json.dumps(llm_output))
+                end = time.time()
+                # print(f"Time to check LLM output {end - start}")
             except queue.Empty:
                 pass
             
@@ -360,7 +359,9 @@ class ServeClient:
                 logging.info("Exiting speech to text thread")
                 break
             
-            if self.frames_np is None: 
+            if self.frames_np is None:
+                # print("frames is None..")
+                time.sleep(0.05)
                 continue
 
             # clip audio if the current chunk exceeds 30 seconds, this basically implies that
@@ -389,7 +390,7 @@ class ServeClient:
                         segments = self.transcript[-self.send_last_n_segments:]
                     segments.append({"text": last_segment})
                     try:
-                        print(f"Sending... {segments}")
+                        # print(f"Sending... {segments}")
                         self.websocket.send(
                             json.dumps({
                                 "uid": self.client_uid,
@@ -413,7 +414,7 @@ class ServeClient:
                 time.sleep(0.01)
     
     def append_segment(self, result):
-        print("adding to trasncript: ", result)
+        # print("adding to trasncript: ", result)
         if not len(self.transcript):
             self.transcript.append({"text": result + " "})
         else:

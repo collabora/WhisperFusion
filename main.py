@@ -11,7 +11,7 @@ from multiprocessing import Process, Manager, Value, Queue
 
 
 if __name__ == "__main__":
-    # multiprocessing.set_start_method('spawn')
+    multiprocessing.set_start_method('spawn')
     
     lock = multiprocessing.Lock()
     
@@ -26,10 +26,10 @@ if __name__ == "__main__":
     whisper_process = multiprocessing.Process(target=whisper_server.run, args=("0.0.0.0", 6006, transcription_queue, llm_queue))
     whisper_process.start()
 
-    # llm_provider = MistralTensorRTLLM()
-    # # llm_provider = MistralTensorRTLLMProvider()
-    # llm_process = multiprocessing.Process(target=llm_provider.run, args=(transcription_queue, llm_queue))
-    # llm_process.start()
+    llm_provider = MistralTensorRTLLM()
+    # llm_provider = MistralTensorRTLLMProvider()
+    llm_process = multiprocessing.Process(target=llm_provider.run, args=(transcription_queue, llm_queue))
+    llm_process.start()
 
-    # llm_process.join()
+    llm_process.join()
     whisper_process.join()
