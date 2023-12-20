@@ -29,7 +29,7 @@ wget --directory-prefix=assets https://openaipublic.azureedge.net/main/whisper/m
 - Build `small.en` TensorRT engine.
 ```bash
 pip install -r requirements.txt
-python3 build.py --output_dir whisper_small_en --use_gpt_attention_plugin --use_gemm_plugin --use_layernorm_plugin  --use_bert_attention_plugin
+python3 build.py --output_dir whisper_small_en --use_gpt_attention_plugin --use_gemm_plugin --use_layernorm_plugin  --use_bert_attention_plugin --model_name small.en
 ```
 
 ### Mistral
