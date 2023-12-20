@@ -35,7 +35,7 @@ python3 build.py --output_dir whisper_small_en --use_gpt_attention_plugin --use_
 ### Mistral
 - Change working dir to [llama example dir](https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/llama) in TensorRT-LLM folder.
 ```bash
-cd TensorRT-LLM/examples/whisper
+cd TensorRT-LLM/examples/llama
 ```
 - Convert Mistral to `fp16` TensorRT engine.
 ```bash
