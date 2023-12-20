@@ -142,10 +142,10 @@ class TranscriptionServer:
                         if no_voice_activity_chunks > 2:
                             if not self.clients[websocket].eos:
                                 self.clients[websocket].set_eos(True)
-                            time.sleep(0.25)    # EOS stop receiving frames for a 250ms(to send output to LLM.)
+                            time.sleep(0.1)    # EOS stop receiving frames for a 100ms(to send output to LLM.)
                         continue
                     no_voice_activity_chunks = 0
-                    self.clients[websocket].set_eos(False)
+                    # self.clients[websocket].set_eos(False)
 
                 except Exception as e:
                     logging.error(e)
@@ -360,7 +360,7 @@ class ServeClient:
                 break
             
             if self.frames_np is None:
-                time.sleep(0.01)    # wait for any audio to arrive
+                time.sleep(0.02)    # wait for any audio to arrive
                 continue
 
             # clip audio if the current chunk exceeds 30 seconds, this basically implies that
@@ -384,7 +384,6 @@ class ServeClient:
                 if len(last_segment):
                     segments.append({"text": last_segment})
                     try:
-                        print(f"Sending... {segments}")
                         self.websocket.send(
                             json.dumps({
                                 "uid": self.client_uid,
@@ -399,9 +398,7 @@ class ServeClient:
                             self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
                             self.set_eos(False)
 
-                            logging.info(
-                                f"[INFO:] \
-                                Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
+                            logging.info(f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
                             )
                             
                     except Exception as e:
