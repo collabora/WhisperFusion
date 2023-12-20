@@ -66,7 +66,12 @@ python3 main.py --whisper_tensorrt_path /root/TensorRT-LLM/examples/whisper/whis
                 --mistral_tensorrt_path /root/TensorRT-LLM/examples/llama/tmp/mistral/7B/trt_engines/fp16/1-gpu/ \
                 --mistral_tokenizer_path teknium/OpenHermes-2.5-Mistral-7B
 ```
-- Use the `WhisperBot/client.py` script to run on the client side.
+- On the client side clone the repo, install the requirements and execute `run_client.py`
+```bash
+cd WhisperBot
+pip install -r requirements.txt
+python3 run_client.py
+```
 
 
 ## Contact Us
