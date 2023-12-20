@@ -12,7 +12,7 @@ Welcome to WhisperBot. WhisperBot builds upon the capabilities of the [WhisperLi
 Install [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/blob/main/docs/source/installation.md) to build Whisper and Mistral TensorRT engines. The README builds a docker image for TensorRT-LLM. 
 Instead of building a docker image, we can also refer to the README and the [Dockerfile.multi](https://github.com/NVIDIA/TensorRT-LLM/blob/main/docker/Dockerfile.multi) to install the required packages in the base pytroch docker image. Just make sure to use the correct base image as mentioned in the dockerfile and everything should go nice and smooth.
 
-### Whisper
+### Build Whisper TensorRT Engine
 - Change working dir to the [whisper example dir](https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/whisper) in TensorRT-LLM.
 ```bash
 cd TensorRT-LLM/examples/whisper
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 python3 build.py --output_dir whisper_small_en --use_gpt_attention_plugin --use_gemm_plugin --use_layernorm_plugin  --use_bert_attention_plugin --model_name small.en
 ```
 
-### Mistral
+### Build Mistral TensorRT Engine
 - Change working dir to [llama example dir](https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/llama) in TensorRT-LLM folder.
 ```bash
 cd TensorRT-LLM/examples/llama
@@ -66,7 +66,7 @@ python3 main.py --whisper_tensorrt_path /root/TensorRT-LLM/examples/whisper/whis
                 --mistral_tensorrt_path /root/TensorRT-LLM/examples/llama/tmp/mistral/7B/trt_engines/fp16/1-gpu/ \
                 --mistral_tokenizer_path teknium/OpenHermes-2.5-Mistral-7B
 ```
-- Use the `WhisperBot/client.py` script to run on the client sidee.
+- Use the `WhisperBot/client.py` script to run on the client side.
 
 
 ## Contact Us
