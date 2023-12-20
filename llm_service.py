@@ -155,6 +155,8 @@ class MistralTensorRTLLM:
     
     def run(
         self,
+        model_path,
+        tokenizer_path,
         transcription_queue=None,
         llm_queue=None,
         input_text=None, 
@@ -166,9 +168,10 @@ class MistralTensorRTLLM:
         debug=False,
     ):
         self.initialize_model(
-        "/root/TensorRT-LLM/examples/llama/tmp/mistral/7B/trt_engines/fp16/1-gpu",
-        "teknium/OpenHermes-2.5-Mistral-7B",
+            model_path,
+            tokenizer_path,
         )
+        
         print("Loaded LLM...")
         while True:
  
