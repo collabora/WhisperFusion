@@ -14,7 +14,7 @@ if PYTHON_BINDINGS:
 
 
 def read_model_name(engine_dir: str):
-    engine_version = tensorrt_llm.builder.get_engine_version(engine_dir)
+    engine_version = tensorrt_llm.runtime.engine.get_engine_version(engine_dir)
 
     with open(Path(engine_dir) / "config.json", 'r') as f:
         config = json.load(f)
@@ -128,7 +128,7 @@ class MistralTensorRTLLM:
             batch_input_ids.append(input_ids)
 
         batch_input_ids = [
-            torch.tensor(x, dtype=torch.int32).unsqueeze(0) for x in batch_input_ids
+            torch.tensor(x, dtype=torch.int32) for x in batch_input_ids
         ]
         return batch_input_ids
     
@@ -188,7 +188,7 @@ class MistralTensorRTLLM:
                 pad_id=None,
             )
 
-            input_lengths = [x.size(1) for x in batch_input_ids]
+            input_lengths = [x.size(0) for x in batch_input_ids]
             with torch.no_grad():
                 outputs = self.runner.generate(
                     batch_input_ids,
