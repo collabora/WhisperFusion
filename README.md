@@ -50,6 +50,27 @@ python build.py --model_dir teknium/OpenHermes-2.5-Mistral-7B \
                 --max_batch_size 1
 ```
 
+### Build Phi TensorRT Engine
+Note: Phi is only available in main branch and hasnt been released yet. So, make sure to build TensorRT-LLM from main branch.
+- Change working dir to [phi example dir](https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/phi) in TensorRT-LLM folder.
+```bash
+cd TensorRT-LLM/examples/phi
+```
+- Build phi TensorRT engine
+```bash
+git lfs install
+git clone https://huggingface.co/microsoft/phi-2
+python3 build.py --dtype=float16                    \
+                 --log_level=verbose                \
+                 --use_gpt_attention_plugin float16 \
+                 --use_gemm_plugin float16          \
+                 --max_batch_size=16                \
+                 --max_input_len=1024               \
+                 --max_output_len=1024              \
+                 --output_dir=phi_engine            \
+                 --model_dir=phi-2>&1 | tee build.log
+```
+
 ## Run WhisperBot
 - Clone this repo and install requirements.
 ```bash
@@ -60,12 +81,24 @@ apt install ffmpeg portaudio19-dev -y
 pip install -r requirements.txt
 ```
 
+### Whisper + Mistral
 - Take the folder path for Whisper TensorRT model, folder_path and tokenizer_path for Mistral TensorRT from the build phase. If a huggingface model is used to build mistral then just use the huggingface repo name as the tokenizer path.
 ```bash
-python3 main.py --whisper_tensorrt_path /root/TensorRT-LLM/examples/whisper/whisper_small_en \
+python3 main.py --mistral
+                --whisper_tensorrt_path /root/TensorRT-LLM/examples/whisper/whisper_small_en \
                 --mistral_tensorrt_path /root/TensorRT-LLM/examples/llama/tmp/mistral/7B/trt_engines/fp16/1-gpu/ \
                 --mistral_tokenizer_path teknium/OpenHermes-2.5-Mistral-7B
 ```
+
+### Whisper + Phi
+- Take the folder path for Whisper TensorRT model, folder_path and tokenizer_path for Phi TensorRT from the build phase. If a huggingface model is used to build phi then just use the huggingface repo name as the tokenizer path.
+```bash
+python3 main.py --phi
+                --whisper_tensorrt_path /root/TensorRT-LLM/examples/whisper/whisper_small_en \
+                --phi_tensorrt_path /root/TensorRT-LLM/examples/phi/phi_engine \
+                --phi_tokenizer_path /root/TensorRT-LLM/examples/phi/phi-2
+```
+
 - On the client side clone the repo, install the requirements and execute `run_client.py`
 ```bash
 cd WhisperBot
