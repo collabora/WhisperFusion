@@ -139,13 +139,13 @@ class TranscriptionServer:
                     speech_prob = self.vad_model(torch.from_numpy(frame_np.copy()), self.RATE).item()
                     if speech_prob < self.vad_threshold:
                         no_voice_activity_chunks += 1
-                        if no_voice_activity_chunks > 2:
+                        if no_voice_activity_chunks > 3:
                             if not self.clients[websocket].eos:
                                 self.clients[websocket].set_eos(True)
                             time.sleep(0.1)    # EOS stop receiving frames for a 100ms(to send output to LLM.)
                         continue
                     no_voice_activity_chunks = 0
-                    # self.clients[websocket].set_eos(False)
+                    self.clients[websocket].set_eos(False)
 
                 except Exception as e:
                     logging.error(e)
@@ -391,13 +391,13 @@ class ServeClient:
                                 "eos": self.eos
                             })
                         )
+                        logging.info(f"[INFO]: {segments}, eos: {self.eos}")
                         if self.eos:
                             # self.append_segment(last_segment)
                             self.timestamp_offset += duration
                             self.prompt = ' '.join(segment['text'] for segment in segments)
                             self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
-                            self.set_eos(False)
-
+                            # self.set_eos(False)
                             logging.info(f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
                             )
                             
@@ -435,4 +435,4 @@ class ServeClient:
         """
         logging.info("Cleaning up.")
         self.exit = True
-        self.transcriber.destroy()
+        # self.transcriber.destroy()
