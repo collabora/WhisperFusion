@@ -10,6 +10,7 @@ from multiprocessing import Process, Manager, Value, Queue
 
 from whisper_live.trt_server import TranscriptionServer
 from llm_service import MistralTensorRTLLM
+from tts_service import WhisperSpeechTTS
 
 
 def parse_arguments():
@@ -71,6 +72,7 @@ if __name__ == "__main__":
 
     transcription_queue = Queue()
     llm_queue = Queue()
+    audio_queue = Queue()
 
 
     whisper_server = TranscriptionServer()
@@ -97,9 +99,16 @@ if __name__ == "__main__":
             args.phi_tokenizer_path,
             transcription_queue,
             llm_queue,
+            audio_queue,
         )
     )
     llm_process.start()
 
+    # audio process
+    # tts_runner = WhisperSpeechTTS()
+    # tts_process = multiprocessing.Process(target=tts_runner.run, args=("0.0.0.0", 8888, audio_queue))
+    # tts_process.start()
+
     llm_process.join()
     whisper_process.join()
+    # tts_process.join()
