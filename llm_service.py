@@ -153,14 +153,21 @@ class MistralTensorRTLLM:
                 output.append(output_text)
         return output
     
+    def format_prompt_qa(self, prompt):
+        return f"Instruct: {prompt}\nOutput:"
+    
+    def format_prompt_chat(self, prompt):
+        return f"Alice: {prompt}\nBob:"
+
     def run(
         self,
         model_path,
         tokenizer_path,
         transcription_queue=None,
         llm_queue=None,
+        audio_queue=None,
         input_text=None, 
-        max_output_len=20, 
+        max_output_len=40, 
         max_attention_window_size=4096, 
         num_beams=1, 
         streaming=True,
@@ -177,10 +184,10 @@ class MistralTensorRTLLM:
  
             # while transcription
             transcription_output = transcription_queue.get()
-            if not debug:
-                input_text=[transcription_output['prompt'].strip()]
+            prompt = transcription_output['prompt'].strip()
+            input_text=[self.format_prompt_qa(prompt)]
             
-            print("Whisper: ", input_text)
+            print("Whisper: ", prompt)
             batch_input_ids = self.parse_input(
                 input_text=input_text,
                 add_special_tokens=True,
@@ -234,6 +241,7 @@ class MistralTensorRTLLM:
                     sequence_lengths,
                 )
             llm_queue.put({"uid": transcription_output["uid"], "llm_output": output})
+            audio_queue.put(output)
 
 
 if __name__=="__main__":
