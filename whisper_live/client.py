@@ -122,6 +122,22 @@ class Client:
         self.frames = b""
         print("[INFO]: * recording")
 
+        # TTS audio websocket client
+        socket_url = f"ws://{host}:8888"
+        self.tts_client_socket = websocket.WebSocketApp(
+            socket_url,
+            on_open=lambda ws: self.on_open_tts(ws),
+            on_message=lambda ws, message: self.on_message_tts(ws, message),
+            on_error=lambda ws, error: self.on_error_tts(ws, error),
+            on_close=lambda ws, close_status_code, close_msg: self.on_close_tts(
+                ws, close_status_code, close_msg
+            ),
+        )
+
+        self.tts_ws_thread = threading.Thread(target=self.tts_client_socket.run_forever)
+        self.tts_ws_thread.setDaemon(True)
+        self.tts_ws_thread.start()
+
     def on_message(self, ws, message):
         """
         Callback function called when a message is received from the server.
@@ -193,10 +209,10 @@ class Client:
         wrapper = textwrap.TextWrapper(width=60)
         word_list = wrapper.wrap(text="".join(text))
         # Print each line.
-        if os.name == "nt":
-            os.system("cls")
-        else:
-            os.system("clear")
+        # if os.name == "nt":
+        #     os.system("cls")
+        # else:
+        #     os.system("clear")
         for element in word_list:
             print(element)
 
@@ -231,7 +247,22 @@ class Client:
                 }
             )
         )
+    
+    def on_open_tts(self):
+        pass
 
+    def on_message_tts(self, ws, message):
+        # print(message)
+        print(type(message))
+        self.write_audio_frames_to_file(message.tobytes(), "tts_out.wav", rate=24000)
+        pass
+
+    def on_error_tts(self, ws, error):
+        print(error)
+
+    def on_close_tts(self, ws, close_status_code, close_msg):
+        print(f"[INFO]: Websocket connection closed: {close_status_code}: {close_msg}")
+    
     @staticmethod
     def bytes_to_float_array(audio_bytes):
         """
@@ -340,7 +371,7 @@ class Client:
         """
         return self.client_socket
 
-    def write_audio_frames_to_file(self, frames, file_name):
+    def write_audio_frames_to_file(self, frames, file_name, rate=None):
         """
         Write audio frames to a WAV file.
 
@@ -356,7 +387,7 @@ class Client:
             wavfile: wave.Wave_write
             wavfile.setnchannels(self.channels)
             wavfile.setsampwidth(2)
-            wavfile.setframerate(self.rate)
+            wavfile.setframerate(self.rate if rate is None else rate)
             wavfile.writeframes(frames)
 
     def process_hls_stream(self, hls_url):
