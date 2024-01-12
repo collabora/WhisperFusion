@@ -263,6 +263,9 @@ class ServeClient:
         self.task = task
         self.transcriber = WhisperTRTLLM(model_path, False, "assets", device="cuda")
 
+
+        self.last_prompt = None
+
         self.timestamp_offset = 0.0
         self.frames_np = None
         self.frames_offset = 0.0
@@ -396,10 +399,22 @@ class ServeClient:
                             # self.append_segment(last_segment)
                             self.timestamp_offset += duration
                             self.prompt = ' '.join(segment['text'] for segment in segments)
-                            self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
+                            if self.last_prompt != self.prompt:
+                                self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
+
+                            self.last_prompt = None
                             # self.set_eos(False)
                             logging.info(f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
                             )
+                        else:
+                            self.prompt = ' '.join(segment['text'] for segment in segments)
+                            
+                            if self.last_prompt != self.prompt:
+                                self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
+
+                            self.last_prompt = self.prompt
+
+                            
                             
                     except Exception as e:
                         logging.error(f"[ERROR]: {e}")

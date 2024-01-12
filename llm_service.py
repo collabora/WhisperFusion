@@ -137,19 +137,26 @@ class MistralTensorRTLLM:
         output_ids,
         input_lengths,
         sequence_lengths,
+        transcription_queue
         ):
         batch_size, num_beams, _ = output_ids.size()
         for batch_idx in range(batch_size):
-            inputs = output_ids[batch_idx][0][:input_lengths[batch_idx]].tolist(
-            )
+            if transcription_queue.qsize() != 0:
+                return None
+
+            inputs = output_ids[batch_idx][0][:input_lengths[batch_idx]].tolist()
             input_text = self.tokenizer.decode(inputs)
             output = []
             for beam in range(num_beams):
+                if transcription_queue.qsize() != 0:
+                    return None
+
                 output_begin = input_lengths[batch_idx]
                 output_end = sequence_lengths[batch_idx][beam]
                 outputs = output_ids[batch_idx][beam][
                     output_begin:output_end].tolist()
                 output_text = self.tokenizer.decode(outputs)
+                print("[LLM] output:", output_text)
                 output.append(output_text)
         return output
     
@@ -179,15 +186,27 @@ class MistralTensorRTLLM:
             tokenizer_path,
         )
         
-        print("Loaded LLM...")
+        print("[LLM] loaded: True")
         while True:
- 
-            # while transcription
+
+            # Get the last transcription output from the queue
             transcription_output = transcription_queue.get()
+            if transcription_queue.qsize() != 0:
+                print("[LLM] transcription queue size:", transcription_queue.qsize())
+                continue
+            # while True:
+            #     try:
+            #         transcription_output = transcription_queue.get_nowait()
+            #     except Exception as e:
+            #         print("[Queue] exception", e)
+            #         break
+
+            # transcription_output = transcription_queue.get()
+
             prompt = transcription_output['prompt'].strip()
             input_text=[self.format_prompt_qa(prompt)]
             
-            print("Whisper: ", prompt)
+            print("[Whisper] prompt:", prompt)
             batch_input_ids = self.parse_input(
                 input_text=input_text,
                 add_special_tokens=True,
@@ -225,8 +244,16 @@ class MistralTensorRTLLM:
                     output = self.decode_tokens(
                         output_ids,
                         input_lengths,
-                        sequence_lengths
+                        sequence_lengths,
+                        transcription_queue
                     )
+
+                    if output is None:
+                        break
+                # Interrupted by transcription queue
+                if output is None:
+                    print("[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!", transcription_queue.qsize())
+                    continue
             else:
                 output_ids = outputs['output_ids']
                 sequence_lengths = outputs['sequence_lengths']
@@ -239,6 +266,7 @@ class MistralTensorRTLLM:
                     output_ids,
                     input_lengths,
                     sequence_lengths,
+                    transcription_queue
                 )
             llm_queue.put({"uid": transcription_output["uid"], "llm_output": output})
             audio_queue.put(output)
