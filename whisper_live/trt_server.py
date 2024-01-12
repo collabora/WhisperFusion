@@ -350,13 +350,16 @@ class ServeClient:
 
         """
         while True:
-            try:
-                if self.llm_queue is not None:
-                    llm_output = self.llm_queue.get_nowait()
-                    if llm_output:
-                        self.websocket.send(json.dumps(llm_output))
-            except queue.Empty:
-                pass
+            if self.eos:
+                try:
+                    llm_output = None
+                    if self.llm_queue is not None:
+                        while not self.llm_queue.empty():
+                            llm_output = self.llm_queue.get_nowait()
+                        if llm_output:
+                            self.websocket.send(json.dumps(llm_output))
+                except queue.Empty:
+                    pass
             
             if self.exit:
                 logging.info("Exiting speech to text thread")
@@ -387,18 +390,21 @@ class ServeClient:
                 if len(last_segment):
                     segments.append({"text": last_segment})
                     try:
-                        self.websocket.send(
-                            json.dumps({
-                                "uid": self.client_uid,
-                                "segments": segments,
-                                "eos": self.eos
-                            })
-                        )
-                        logging.info(f"[INFO]: {segments}, eos: {self.eos}")
+                        self.prompt = ' '.join(segment['text'] for segment in segments)
+                        if self.last_prompt != self.prompt:
+                            self.websocket.send(
+                                json.dumps({
+                                    "uid": self.client_uid,
+                                    "segments": segments,
+                                    "eos": self.eos
+                                })
+                            )
+                            logging.info(f"[INFO]: {segments}, eos: {self.eos}")
+                        
                         if self.eos:
                             # self.append_segment(last_segment)
                             self.timestamp_offset += duration
-                            self.prompt = ' '.join(segment['text'] for segment in segments)
+                            
                             if self.last_prompt != self.prompt:
                                 self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
 
@@ -406,9 +412,7 @@ class ServeClient:
                             # self.set_eos(False)
                             logging.info(f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
                             )
-                        else:
-                            self.prompt = ' '.join(segment['text'] for segment in segments)
-                            
+                        else:                         
                             if self.last_prompt != self.prompt:
                                 self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
 
