@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collabora - WhisperFusion: The Power of WhisperLive, LLM's, and WhisperSpeech</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/all.min.css"/>
+</head>
+<body>
+  <div style="background-color: white;width:100vw;margin-top:0;">
+  <div style="max-width: 500px; margin: 0 auto !important; float: none !important;padding-top:20px;padding-bottom:30px;font-family: 'Poppins', sans-serif;font-weight: 400;">
+    <div style="width:150px;padding-top:40px;display:flex;max-width: 500px;">
+      <img src="img/Collabora_Logo.svg" \>
+    </div>
+    <br>
+    <h3>WhisperFusion: The Power of WhisperLive, LLM's, and WhisperSpeech</h3>
+    <br>
+    <p>Using state-of-the-art natural language processing techniques, we implemented WhisperFusion a techonlogy demo that combines live transcriptions, LLM's and text-to-speech, in a low-latency pipeline. For more details about the demo, checkout <a style="color:#6990F2" href="https://github.com/collabora/WhisperFusion">https://github.com/collabora/WhisperFusion</a>.</p>
+  </div>
+</div>
+  <center>
+    <div id="main-wrapper" class="message-wrapper" style="max-width: 500px;"></div>
+
+    <br><br>
+    <div id="control-container" class="control-container" style="width:500px;height:50px;background-color: #5C2983;border-radius: 20px;">
+      <div style="margin-top:10px;padding-left:20px">
+        <img class="button-item" onclick="startRecording()"  onmouseleave='this.src="img/microphone.png"'  onmouseover='this.src="img/microphone-hover.png"' style="width:20px;padding-top:4px" src="img/microphone-white.png" \>
+      </div>
+      <div style="margin-top:10px">
+        <img class="button-item" onclick="stopRecording()" id="recording-stop-btn" style="width:20px;display:none;padding-top:4px" src="img/stop.png" \>
+      </div>
+      <div>
+        <div id="instructions-text" style="width:440px;height:40px;border-radius: 14px;color:white;padding:4px;font-size:14px;text-align:center;padding-top:15px">Click the microphone to start</div>
+      </div>
+      <div style="margin-top:10px">
+        <img id="recording-dot" class="avatar" src="img/record.png" style="display:none;padding-top:2px" \>
+      </div>
+      <div id="recording-line" style="display:none;margin-top:20px;width:280px;height:4px;background-color: #6990F2;border-radius: 2px;padding-top:6px">
+      </div>
+      <div style="margin-top:2px;padding-left:10px;padding-top:0px">
+        <p id="recording-time" style="display:none;">00:00</p>
+      </div>
+      <div></div>
+    </div>
+    <br><br>
+  </center>
+
+</body>
+
+<script src="js/main.js"></script>
+</html>
