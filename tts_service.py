@@ -43,12 +43,18 @@ class WhisperSpeechTTS:
             llm_output = llm_response["llm_output"][0]
             self.eos = llm_response["eos"]
 
+            def should_abort():
+                if not audio_queue.empty(): raise TimeoutError()
+
             # only process if the output updated
             if self.last_llm_response != llm_output.strip():
                 logging.INFO("[WhisperSpeech INFO:] Tunning TTS inference ...")
-                audio = self.pipe.vocoder.decode(self.pipe.generate_atoks(llm_output.strip()))
-                self.output_audio = audio.cpu().numpy()
-                self.last_llm_response = llm_output.strip()
+                try:
+                    audio = self.pipe.generate(llm_output.strip(), step_callback=should_abort)
+                    self.output_audio = audio.cpu().numpy()
+                    self.last_llm_response = llm_output.strip()
+                except TimeoutError:
+                    pass
 
             if self.eos and self.output_audio is not None:
                 try:
