@@ -150,6 +150,7 @@ class TranscriptionServer:
                 except Exception as e:
                     logging.error(e)
                     return
+                print("[WhisperLive INFO:] adding frames ...")
                 self.clients[websocket].add_frames(frame_np)
 
                 elapsed_time = time.time() - self.clients_start_time[websocket]
@@ -379,6 +380,7 @@ class ServeClient:
             input_bytes = self.frames_np[int(samples_take):].copy()
             duration = input_bytes.shape[0] / self.RATE
             if duration<0.4:
+                time.sleep(0.01)    # 5ms sleep to wait for some voice active audio to arrive
                 continue
 
             try:
@@ -401,23 +403,14 @@ class ServeClient:
                             )
                             logging.info(f"[INFO]: {segments}, eos: {self.eos}")
                         
+                        self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt, "eos": self.eos})
                         if self.eos:
                             # self.append_segment(last_segment)
                             self.timestamp_offset += duration
-                            
-                            if self.last_prompt != self.prompt:
-                                self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
-
-                            self.last_prompt = None
-                            # self.set_eos(False)
-                            logging.info(f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
+                            logging.info(
+                                f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
                             )
-                        else:                         
-                            if self.last_prompt != self.prompt:
-                                self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt})
-
-                            self.last_prompt = self.prompt
-
+                        
                             
                             
                     except Exception as e:

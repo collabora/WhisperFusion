@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 from typing import Optional
+import logging
+logging.basicConfig(level = logging.INFO)
+
 import numpy as np
 import torch
 from transformers import AutoTokenizer
@@ -104,6 +107,8 @@ class MistralTensorRTLLM:
                          debug_mode=False,
                          lora_ckpt_source='hf')
         self.runner = self.runner_cls.from_dir(**self.runner_kwargs)
+        self.last_prompt = None
+        self.last_output = None
 
     def parse_input(
         self,
@@ -156,7 +161,7 @@ class MistralTensorRTLLM:
                 outputs = output_ids[batch_idx][beam][
                     output_begin:output_end].tolist()
                 output_text = self.tokenizer.decode(outputs)
-                print("[LLM] output:", output_text)
+                logging.info(f"[LLM] output: {output_text}")
                 output.append(output_text)
         return output
     
@@ -177,7 +182,7 @@ class MistralTensorRTLLM:
         max_output_len=40, 
         max_attention_window_size=4096, 
         num_beams=1, 
-        streaming=True,
+        streaming=False,
         streaming_interval=4,
         debug=False,
     ):
@@ -186,27 +191,26 @@ class MistralTensorRTLLM:
             tokenizer_path,
         )
         
-        print("[LLM] loaded: True")
+        logging.info("[LLM] loaded: True")
         while True:
 
             # Get the last transcription output from the queue
             transcription_output = transcription_queue.get()
             if transcription_queue.qsize() != 0:
-                print("[LLM] transcription queue size:", transcription_queue.qsize())
+                logging.info("[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!")
                 continue
-            # while True:
-            #     try:
-            #         transcription_output = transcription_queue.get_nowait()
-            #     except Exception as e:
-            #         print("[Queue] exception", e)
-            #         break
-
-            # transcription_output = transcription_queue.get()
 
             prompt = transcription_output['prompt'].strip()
             input_text=[self.format_prompt_qa(prompt)]
+            self.eos = transcription_output["eos"]
             
-            print("[Whisper] prompt:", prompt)
+            if self.last_prompt == prompt:
+                if self.last_output is not None:
+                    # logging.info(f"[LLM info:] Same prompt, adding last llm output to audio queue.")
+                    audio_queue.put({"llm_output": self.last_output, "eos": self.eos})
+                    continue
+
+            logging.info(f"[LLM INFO:] WhisperLive prompt: {prompt}, eos: {self.eos}")
             batch_input_ids = self.parse_input(
                 input_text=input_text,
                 add_special_tokens=True,
@@ -252,15 +256,16 @@ class MistralTensorRTLLM:
                         break
                 # Interrupted by transcription queue
                 if output is None:
-                    print("[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!", transcription_queue.qsize())
+                    logging.info(f"[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!")
                     continue
             else:
                 output_ids = outputs['output_ids']
                 sequence_lengths = outputs['sequence_lengths']
                 context_logits = None
                 generation_logits = None
-                if runner.gather_all_token_logits:
+                if self.runner.gather_context_logits:
                     context_logits = outputs['context_logits']
+                if self.runner.gather_generation_logits:
                     generation_logits = outputs['generation_logits']
                 output = self.decode_tokens(
                     output_ids,
@@ -268,8 +273,16 @@ class MistralTensorRTLLM:
                     sequence_lengths,
                     transcription_queue
                 )
-            llm_queue.put({"uid": transcription_output["uid"], "llm_output": output})
-            audio_queue.put(output)
+            
+            # if self.eos:
+            if output is not None:
+                self.last_output = output
+                self.last_prompt = prompt
+                llm_queue.put({"uid": transcription_output["uid"], "llm_output": output})
+                audio_queue.put({"llm_output": output, "eos": self.eos})
+            
+            if self.eos:
+                self.last_prompt = None
 
 
 if __name__=="__main__":
@@ -278,11 +291,11 @@ if __name__=="__main__":
         "/root/TensorRT-LLM/examples/llama/tmp/mistral/7B/trt_engines/fp16/1-gpu",
         "teknium/OpenHermes-2.5-Mistral-7B",
     )
-    print("intialized")
+    logging.info("intialized")
     for i in range(1):
         output = llm(
             ["Born in north-east France, Soyer trained as a"], streaming=True
         )
-    print(output)
+    logging.info(output)
 
 

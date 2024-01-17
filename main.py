@@ -105,10 +105,10 @@ if __name__ == "__main__":
     llm_process.start()
 
     # audio process
-    # tts_runner = WhisperSpeechTTS()
-    # tts_process = multiprocessing.Process(target=tts_runner.run, args=("0.0.0.0", 8888, audio_queue))
-    # tts_process.start()
+    tts_runner = WhisperSpeechTTS()
+    tts_process = multiprocessing.Process(target=tts_runner.run, args=("0.0.0.0", 8888, audio_queue))
+    tts_process.start()
 
     llm_process.join()
     whisper_process.join()
-    # tts_process.join()
+    tts_process.join()
