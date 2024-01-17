@@ -150,7 +150,6 @@ class TranscriptionServer:
                 except Exception as e:
                     logging.error(e)
                     return
-                print("[WhisperLive INFO:] adding frames ...")
                 self.clients[websocket].add_frames(frame_np)
 
                 elapsed_time = time.time() - self.clients_start_time[websocket]
