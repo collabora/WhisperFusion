@@ -358,9 +358,10 @@ class ServeClient:
                         llm_response = self.llm_queue.get()
                     
                     if llm_response:
-                        # eos = llm_response["eos"]
-                        # if eos:
-                        self.websocket.send(json.dumps(llm_response))
+                        eos = llm_response["eos"]
+                        if eos:
+                            logging.info(f"[LLM INFO:] sending response to client : {llm_response}")
+                            self.websocket.send(json.dumps(llm_response))
             except queue.Empty:
                 pass
             
