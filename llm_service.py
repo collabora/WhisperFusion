@@ -202,13 +202,16 @@ class MistralTensorRTLLM:
 
             prompt = transcription_output['prompt'].strip()
             input_text=[self.format_prompt_qa(prompt)]
-            self.eos = transcription_output["eos"]
-            
+                    
+            # if prompt is same but EOS is True, we need that to send outputs to websockets
             if self.last_prompt == prompt:
-                if self.last_output is not None:
-                    # logging.info(f"[LLM info:] Same prompt, adding last llm output to audio queue.")
+                if self.last_output is not None and transcription_output["eos"]:
+                    self.eos = transcription_output["eos"]
+                    llm_queue.put({"uid": transcription_output["uid"], "llm_output": self.last_output, "eos": self.eos})
                     audio_queue.put({"llm_output": self.last_output, "eos": self.eos})
                     continue
+            
+            self.eos = transcription_output["eos"]
 
             logging.info(f"[LLM INFO:] WhisperLive prompt: {prompt}, eos: {self.eos}")
             batch_input_ids = self.parse_input(
@@ -278,11 +281,12 @@ class MistralTensorRTLLM:
             if output is not None:
                 self.last_output = output
                 self.last_prompt = prompt
-                llm_queue.put({"uid": transcription_output["uid"], "llm_output": output})
+                llm_queue.put({"uid": transcription_output["uid"], "llm_output": output, "eos": self.eos})
                 audio_queue.put({"llm_output": output, "eos": self.eos})
             
             if self.eos:
                 self.last_prompt = None
+                self.last_output = None
 
 
 if __name__=="__main__":

@@ -350,16 +350,19 @@ class ServeClient:
 
         """
         while True:
-            if self.eos:
-                try:
-                    llm_output = None
-                    if self.llm_queue is not None:
-                        while not self.llm_queue.empty():
-                            llm_output = self.llm_queue.get_nowait()
-                        if llm_output:
-                            self.websocket.send(json.dumps(llm_output))
-                except queue.Empty:
-                    pass
+            # send the LLM outputs
+            try:
+                llm_response = None
+                if self.llm_queue is not None:
+                    while not self.llm_queue.empty():
+                        llm_response = self.llm_queue.get()
+                    
+                    if llm_response:
+                        # eos = llm_response["eos"]
+                        # if eos:
+                        self.websocket.send(json.dumps(llm_response))
+            except queue.Empty:
+                pass
             
             if self.exit:
                 logging.info("Exiting speech to text thread")
@@ -400,12 +403,12 @@ class ServeClient:
                                     "eos": self.eos
                                 })
                             )
-                            logging.info(f"[INFO]: {segments}, eos: {self.eos}")
-                        
+                            
                         self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt, "eos": self.eos})
                         if self.eos:
                             # self.append_segment(last_segment)
                             self.timestamp_offset += duration
+                            logging.info(f"[INFO]: {segments}, eos: {self.eos}")
                             logging.info(
                                 f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
                             )
