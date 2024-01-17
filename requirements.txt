@@ -1,7 +1,9 @@
-PyAudio
 faster-whisper==0.9.0
 websockets
 onnxruntime==1.16.0
 ffmpeg-python
 scipy
 websocket-client
+tiktoken==0.3.3
+kaldialign
+braceexpand
