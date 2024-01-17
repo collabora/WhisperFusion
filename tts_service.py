@@ -30,17 +30,16 @@ class WhisperSpeechTTS:
         self.output_audio = None
 
         while True:
-            
+            llm_response = audio_queue.get()
+            if audio_queue.qsize() != 0:
+                continue
+
             # check if this websocket exists
             try:
                 websocket.ping()
             except Exception as e:
                 del websocket
                 break
-
-            llm_response = audio_queue.get()
-            if audio_queue.qsize() != 0:
-                continue
             
             llm_output = llm_response["llm_output"][0]
             self.eos = llm_response["eos"]
