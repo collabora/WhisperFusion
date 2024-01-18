@@ -221,7 +221,7 @@ class TensorRTLLMEngine:
                     llm_queue.put({"uid": transcription_output["uid"], "llm_output": self.last_output, "eos": self.eos})
                     audio_queue.put({"llm_output": self.last_output, "eos": self.eos})
                     conversation_history[transcription_output["uid"]].append(
-                        (transcription_output['prompt'].strip(), self.last_output.strip())
+                        (transcription_output['prompt'].strip(), self.last_output[0].strip())
                     )
                     print(f"History: {conversation_history}")
                     continue
