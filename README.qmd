@@ -45,74 +45,33 @@ Instead of building a docker image, we can also refer to the README and the [Doc
 ### Build Whisper TensorRT Engine
 
 ```{python}
-include_file('setup/setup-tensorrt-llm.sh')
+include_file('docker/scripts/setup-whisper.sh')
 ```
 
 ### Build Mistral TensorRT Engine
-- Change working dir to [llama example dir](https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/llama) in TensorRT-LLM folder.
-```bash
-cd TensorRT-LLM/examples/llama
-```
-- Convert Mistral to `fp16` TensorRT engine.
-```bash
-python build.py --model_dir teknium/OpenHermes-2.5-Mistral-7B \
-                --dtype float16 \
-                --remove_input_padding \
-                --use_gpt_attention_plugin float16 \
-                --enable_context_fmha \
-                --use_gemm_plugin float16 \
-                --output_dir ./tmp/mistral/7B/trt_engines/fp16/1-gpu/ \
-                --max_input_len 5000
-                --max_batch_size 1
+
+```{python}
+include_file('docker/scripts/setup-mistral.sh')
 ```
 
 ### Build Phi TensorRT Engine
-Note: Phi is only available in main branch and hasnt been released yet. So, make sure to build TensorRT-LLM from main branch.
-- Change working dir to [phi example dir](https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/phi) in TensorRT-LLM folder.
-```bash
-cd TensorRT-LLM/examples/phi
-```
-- Build phi TensorRT engine
-```bash
-git lfs install
-git clone https://huggingface.co/microsoft/phi-2
-python3 build.py --dtype=float16                    \
-                 --log_level=verbose                \
-                 --use_gpt_attention_plugin float16 \
-                 --use_gemm_plugin float16          \
-                 --max_batch_size=16                \
-                 --max_input_len=1024               \
-                 --max_output_len=1024              \
-                 --output_dir=phi_engine            \
-                 --model_dir=phi-2>&1 | tee build.log
+
+```{python}
+include_file('docker/scripts/setup-phi-2.sh')
 ```
 
-## Run WhisperBot
-- Clone this repo and install requirements.
-```bash
-git clone https://github.com/collabora/WhisperBot.git
-cd WhisperBot
-apt update
-apt install ffmpeg portaudio19-dev -y
-pip install -r requirements.txt
+## Build WhisperBot
+
+```{python}
+include_file('docker/scripts/setup-whisperbot.sh')
 ```
 
-### Whisper + Mistral
-- Take the folder path for Whisper TensorRT model, folder_path and tokenizer_path for Mistral TensorRT from the build phase. If a huggingface model is used to build mistral then just use the huggingface repo name as the tokenizer path.
-```bash
-python3 main.py --mistral
-                --whisper_tensorrt_path /root/TensorRT-LLM/examples/whisper/whisper_small_en \
-                --mistral_tensorrt_path /root/TensorRT-LLM/examples/llama/tmp/mistral/7B/trt_engines/fp16/1-gpu/ \
-                --mistral_tokenizer_path teknium/OpenHermes-2.5-Mistral-7B
-```
+### Run WhisperBot with Whisper and Mistral/Phi-2
 
-### Whisper + Phi
-- Take the folder path for Whisper TensorRT model, folder_path and tokenizer_path for Phi TensorRT from the build phase. If a huggingface model is used to build phi then just use the huggingface repo name as the tokenizer path.
-```bash
-python3 main.py --phi
-                --whisper_tensorrt_path /root/TensorRT-LLM/examples/whisper/whisper_small_en \
-                --phi_tensorrt_path /root/TensorRT-LLM/examples/phi/phi_engine \
-                --phi_tokenizer_path /root/TensorRT-LLM/examples/phi/phi-2
+Take the folder path for Whisper TensorRT model, folder_path and tokenizer_path for Mistral/Phi-2 TensorRT from the build phase. If a huggingface model is used to build mistral/phi-2 then just use the huggingface repo name as the tokenizer path.
+
+```{python}
+include_file('docker/scripts/run-whisperbot.sh')
 ```
 
 - On the client side clone the repo, install the requirements and execute `run_client.py`
@@ -121,7 +80,6 @@ cd WhisperBot
 pip install -r requirements.txt
 python3 run_client.py
 ```
-
 
 ## Contact Us
 For questions or issues, please open an issue.
