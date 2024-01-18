@@ -39,6 +39,7 @@ class WhisperSpeechTTS:
                 websocket.ping()
             except Exception as e:
                 del websocket
+                audio_queue.put(llm_response)
                 break
             
             llm_output = llm_response["llm_output"][0]
