@@ -9,7 +9,7 @@ import functools
 from multiprocessing import Process, Manager, Value, Queue
 
 from whisper_live.trt_server import TranscriptionServer
-from llm_service import MistralTensorRTLLM
+from llm_service import TensorRTLLMEngine
 from tts_service import WhisperSpeechTTS
 
 
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     )
     whisper_process.start()
 
-    llm_provider = MistralTensorRTLLM()
+    llm_provider = TensorRTLLMEngine()
     # llm_provider = MistralTensorRTLLMProvider()
     llm_process = multiprocessing.Process(
         target=llm_provider.run,

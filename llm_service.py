@@ -84,7 +84,7 @@ def load_tokenizer(tokenizer_dir: Optional[str] = None,
     return tokenizer, pad_id, end_id
 
 
-class MistralTensorRTLLM:
+class TensorRTLLMEngine:
     def __init__(self):
         pass
     
@@ -165,11 +165,17 @@ class MistralTensorRTLLM:
                 output.append(output_text)
         return output
     
-    def format_prompt_qa(self, prompt):
-        return f"Instruct: {prompt}\nOutput:"
+    def format_prompt_qa(self, prompt, conversation_history):
+        formatted_prompt = ""
+        for user_prompt, llm_response in conversation_history:
+            formatted_prompt += f"Instruct: {user_prompt}\nOutput:{llm_response}\n"
+        return f"{formatted_prompt}Instruct: {prompt}\nOutput:"
     
-    def format_prompt_chat(self, prompt):
-        return f"Alice: {prompt}\nBob:"
+    def format_prompt_chat(self, prompt, conversation_history):
+        formatted_prompt = ""
+        for user_prompt, llm_response in conversation_history:
+            formatted_prompt += f"Alice: {user_prompt}\nBob:{llm_response}\n"
+        return f"{formatted_prompt}Alice: {prompt}\nBob:"
 
     def run(
         self,
@@ -192,6 +198,9 @@ class MistralTensorRTLLM:
         )
         
         logging.info("[LLM] loaded: True")
+
+        conversation_history = {}
+
         while True:
 
             # Get the last transcription output from the queue
@@ -199,17 +208,26 @@ class MistralTensorRTLLM:
             if transcription_queue.qsize() != 0:
                 logging.info("[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!")
                 continue
+            
+            if transcription_output["uid"] not in conversation_history:
+                conversation_history[transcription_output["uid"]] = []
 
             prompt = transcription_output['prompt'].strip()
-            input_text=[self.format_prompt_qa(prompt)]
-                    
+                                
             # if prompt is same but EOS is True, we need that to send outputs to websockets
             if self.last_prompt == prompt:
                 if self.last_output is not None and transcription_output["eos"]:
                     self.eos = transcription_output["eos"]
                     llm_queue.put({"uid": transcription_output["uid"], "llm_output": self.last_output, "eos": self.eos})
                     audio_queue.put({"llm_output": self.last_output, "eos": self.eos})
+                    conversation_history[transcription_output["uid"]].append(
+                        (transcription_output['prompt'].strip(), self.last_output[0].strip())
+                    )
+                    print(f"History: {conversation_history}")
                     continue
+
+            input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
+            # print(f"Formatted prompt with history...:\n{input_text}")
             
             self.eos = transcription_output["eos"]
 
@@ -257,6 +275,10 @@ class MistralTensorRTLLM:
 
                     if output is None:
                         break
+                
+                if output is not None:
+                    if "Instruct" in output[0]:
+                        output[0] = output[0].split("Instruct")[0]
                 # Interrupted by transcription queue
                 if output is None:
                     logging.info(f"[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -276,6 +298,9 @@ class MistralTensorRTLLM:
                     sequence_lengths,
                     transcription_queue
                 )
+                if output is not None:
+                    if "Instruct" in output[0]:
+                        output[0] = output[0].split("Instruct")[0]
             
             # if self.eos:
             if output is not None:
@@ -285,12 +310,15 @@ class MistralTensorRTLLM:
                 audio_queue.put({"llm_output": output, "eos": self.eos})
             
             if self.eos:
+                conversation_history[transcription_output["uid"]].append(
+                    (transcription_output['prompt'].strip(), output[0].strip())
+                )
                 self.last_prompt = None
                 self.last_output = None
 
 
 if __name__=="__main__":
-    llm = MistralTensorRTLLM()
+    llm = TensorRTLLMEngine()
     llm.initialize_model(
         "/root/TensorRT-LLM/examples/llama/tmp/mistral/7B/trt_engines/fp16/1-gpu",
         "teknium/OpenHermes-2.5-Mistral-7B",
