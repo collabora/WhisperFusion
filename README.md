@@ -1,5 +1,5 @@
 # WhisperBot
-Welcome to WhisperBot. WhisperBot builds upon the capabilities of the [WhisperLive]() by integrating Mistral, a Large Language Model (LLM), on top of the real-time speech-to-text pipeline. WhisperLive relies on OpenAI Whisper, a powerful automatic speech recognition (ASR) system. Both Mistral and Whisper are optimized to run efficiently as TensorRT engines, maximizing performance and real-time processing capabilities.
+Welcome to WhisperBot. WhisperBot builds upon the capabilities of the [WhisperLive](https://github.com/collabora/WhisperLive) and [WhisperSpeech](https://github.com/collabora/WhisperSpeech) by integrating Mistral, a Large Language Model (LLM), on top of the real-time speech-to-text pipeline. WhisperLive relies on OpenAI Whisper, a powerful automatic speech recognition (ASR) system. Both Mistral and Whisper are optimized to run efficiently as TensorRT engines, maximizing performance and real-time processing capabilities.
 
 ## Features
 - **Real-Time Speech-to-Text**: Utilizes OpenAI WhisperLive to convert spoken language into text in real-time.
