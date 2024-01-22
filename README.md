@@ -56,19 +56,19 @@ Note: Phi is only available in main branch and hasnt been released yet. So, make
 ```bash
 cd TensorRT-LLM/examples/phi
 ```
-- Build phi TensorRT engine
+- Build [Dolphin Phi Finetuned](https://huggingface.co/cognitivecomputations/dolphin-2_6-phi-2) ChatML format
 ```bash
 git lfs install
-git clone https://huggingface.co/microsoft/phi-2
+git clone https://huggingface.co/cognitivecomputations/dolphin-2_6-phi-2
 python3 build.py --dtype=float16                    \
                  --log_level=verbose                \
                  --use_gpt_attention_plugin float16 \
                  --use_gemm_plugin float16          \
-                 --max_batch_size=16                \
+                 --max_batch_size=1                 \
                  --max_input_len=1024               \
                  --max_output_len=1024              \
                  --output_dir=phi_engine            \
-                 --model_dir=phi-2>&1 | tee build.log
+                 --model_dir=dolphin-2_6-phi-2>&1 | tee build.log
 ```
 
 ## Run WhisperBot
@@ -96,7 +96,7 @@ python3 main.py --mistral
 python3 main.py --phi
                 --whisper_tensorrt_path /root/TensorRT-LLM/examples/whisper/whisper_small_en \
                 --phi_tensorrt_path /root/TensorRT-LLM/examples/phi/phi_engine \
-                --phi_tokenizer_path /root/TensorRT-LLM/examples/phi/phi-2
+                --phi_tokenizer_path /root/TensorRT-LLM/examples/phi/dolphin-2_6-phi-2
 ```
 
 - On the client side clone the repo, install the requirements and execute `run_client.py`
