@@ -177,6 +177,14 @@ class TensorRTLLMEngine:
             formatted_prompt += f"Alice: {user_prompt}\nBob:{llm_response}\n"
         return f"{formatted_prompt}Alice: {prompt}\nBob:"
 
+    def format_prompt_chatml(self, prompt, conversation_history, system_prompt=""):
+        formatted_prompt = ("<|im_start|>system\n" + system_prompt + "<|im_end|>\n")
+        for user_prompt, llm_response in conversation_history:
+            formatted_prompt += f"<|im_start|>user\n{user_prompt}<|im_end|>\n"
+            formatted_prompt += f"<|im_start|>assistant\n{llm_response}<|im_end|>\n"
+        formatted_prompt += f"<|im_start|>user\n{prompt}<|im_end|>\n"
+        return formatted_prompt
+
     def run(
         self,
         model_path,
@@ -185,7 +193,7 @@ class TensorRTLLMEngine:
         llm_queue=None,
         audio_queue=None,
         input_text=None, 
-        max_output_len=40, 
+        max_output_len=50, 
         max_attention_window_size=4096, 
         num_beams=1, 
         streaming=False,
@@ -226,7 +234,9 @@ class TensorRTLLMEngine:
                     print(f"History: {conversation_history}")
                     continue
 
-            input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
+            # input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
+            input_text=[self.format_prompt_chatml(prompt, conversation_history[transcription_output["uid"]], system_prompt="You are Dolphin, a helpful AI assistant")]
+            # print(input_text)
             # print(f"Formatted prompt with history...:\n{input_text}")
             
             self.eos = transcription_output["eos"]
@@ -276,9 +286,6 @@ class TensorRTLLMEngine:
                     if output is None:
                         break
                 
-                if output is not None:
-                    if "Instruct" in output[0]:
-                        output[0] = output[0].split("Instruct")[0]
                 # Interrupted by transcription queue
                 if output is None:
                     logging.info(f"[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -298,12 +305,12 @@ class TensorRTLLMEngine:
                     sequence_lengths,
                     transcription_queue
                 )
-                if output is not None:
-                    if "Instruct" in output[0]:
-                        output[0] = output[0].split("Instruct")[0]
             
             # if self.eos:
             if output is not None:
+                if "Instruct" in output[0]:
+                    output[0] = output[0].split("Instruct")[0]
+                output[0] = output[0].rsplit('.', 1)[0] + '.'
                 self.last_output = output
                 self.last_prompt = prompt
                 llm_queue.put({"uid": transcription_output["uid"], "llm_output": output, "eos": self.eos})
