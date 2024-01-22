@@ -7,6 +7,7 @@ logging.basicConfig(level = logging.INFO)
 import numpy as np
 import torch
 from transformers import AutoTokenizer
+import re
 
 import tensorrt_llm
 from tensorrt_llm.logger import logger
@@ -177,6 +178,14 @@ class TensorRTLLMEngine:
             formatted_prompt += f"Alice: {user_prompt}\nBob:{llm_response}\n"
         return f"{formatted_prompt}Alice: {prompt}\nBob:"
 
+    def format_prompt_chatml(self, prompt, conversation_history, system_prompt=""):
+        formatted_prompt = ("<|im_start|>system\n" + system_prompt + "<|im_end|>\n")
+        for user_prompt, llm_response in conversation_history:
+            formatted_prompt += f"<|im_start|>user\n{user_prompt}<|im_end|>\n"
+            formatted_prompt += f"<|im_start|>assistant\n{llm_response}<|im_end|>\n"
+        formatted_prompt += f"<|im_start|>user\n{prompt}<|im_end|>\n"
+        return formatted_prompt
+
     def run(
         self,
         model_path,
@@ -185,7 +194,7 @@ class TensorRTLLMEngine:
         llm_queue=None,
         audio_queue=None,
         input_text=None, 
-        max_output_len=40, 
+        max_output_len=50, 
         max_attention_window_size=4096, 
         num_beams=1, 
         streaming=False,
@@ -226,12 +235,13 @@ class TensorRTLLMEngine:
                     print(f"History: {conversation_history}")
                     continue
 
-            input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
-            # print(f"Formatted prompt with history...:\n{input_text}")
+            # input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
+            input_text=[self.format_prompt_chatml(prompt, conversation_history[transcription_output["uid"]], system_prompt="You are Dolphin, a helpful AI assistant")]
+            logging.info(f"[LLM INFO:] Formatted prompt with history...:\n{input_text}")
             
             self.eos = transcription_output["eos"]
 
-            logging.info(f"[LLM INFO:] WhisperLive prompt: {prompt}, eos: {self.eos}")
+            # logging.info(f"[LLM INFO:] WhisperLive prompt: {prompt}, eos: {self.eos}")
             batch_input_ids = self.parse_input(
                 input_text=input_text,
                 add_special_tokens=True,
@@ -240,6 +250,7 @@ class TensorRTLLMEngine:
             )
 
             input_lengths = [x.size(0) for x in batch_input_ids]
+            print(f"[LLM INFO:] Input lengths: {input_lengths} / 1024")
             with torch.no_grad():
                 outputs = self.runner.generate(
                     batch_input_ids,
@@ -276,9 +287,6 @@ class TensorRTLLMEngine:
                     if output is None:
                         break
                 
-                if output is not None:
-                    if "Instruct" in output[0]:
-                        output[0] = output[0].split("Instruct")[0]
                 # Interrupted by transcription queue
                 if output is None:
                     logging.info(f"[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -298,12 +306,10 @@ class TensorRTLLMEngine:
                     sequence_lengths,
                     transcription_queue
                 )
-                if output is not None:
-                    if "Instruct" in output[0]:
-                        output[0] = output[0].split("Instruct")[0]
             
             # if self.eos:
             if output is not None:
+                output[0] = clean_llm_output(output[0])
                 self.last_output = output
                 self.last_prompt = prompt
                 llm_queue.put({"uid": transcription_output["uid"], "llm_output": output, "eos": self.eos})
@@ -316,7 +322,26 @@ class TensorRTLLMEngine:
                 self.last_prompt = None
                 self.last_output = None
 
+def clean_llm_output(output):
+    output = output.replace("\n\nDolphin\n\n", "")
+    output = output.replace("\nDolphin\n\n", "")
 
+    if not output.endswith('.') and not output.endswith('?') and not output.endswith('!'):
+        last_punct = output.rfind('.')
+        last_q = output.rfind('?')
+        if last_q > last_punct:
+            last_punct = last_q
+        
+        last_ex = output.rfind('!')
+        if last_ex > last_punct:
+            last_punct = last_ex
+        
+        if last_punct > 0:
+            output = output[:last_punct+1]
+
+    return output
+   
+    
 if __name__=="__main__":
     llm = TensorRTLLMEngine()
     llm.initialize_model(
