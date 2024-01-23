@@ -1,0 +1,86 @@
+---
+format: gfm
+execute:
+  echo: false
+  output: asis
+---
+
+```{python}
+#| include: false
+def include_file(fname):
+  with open(fname) as f:
+    print(f'''
+:::{{.callout-note}}
+These steps are included in `{fname}`
+:::
+''')
+    code = False
+    for l in f:
+      if l.startswith('#!'):
+        continue
+      if l.startswith('## '):
+        if code: print("```"); code=False
+        print(l[3:])
+      elif l.strip():
+        if not code: print("```bash"); code=True
+        print(l.rstrip())
+    if code: print("```")
+```
+
+# WhisperBot
+
+Welcome to WhisperBot. WhisperBot builds upon the capabilities of the [WhisperLive](https://github.com/collabora/WhisperLive) and [WhisperSpeech](https://github.com/collabora/WhisperSpeech) by integrating Mistral, a Large Language Model (LLM), on top of the real-time speech-to-text pipeline. WhisperLive relies on OpenAI Whisper, a powerful automatic speech recognition (ASR) system. Both Mistral and Whisper are optimized to run efficiently as TensorRT engines, maximizing performance and real-time processing capabilities.
+
+## Features
+- **Real-Time Speech-to-Text**: Utilizes OpenAI WhisperLive to convert spoken language into text in real-time.
+
+- **Large Language Model Integration**: Adds Mistral, a Large Language Model, to enhance the understanding and context of the transcribed text.
+
+- **TensorRT Optimization**: Both Mistral and Whisper are optimized to run as TensorRT engines, ensuring high-performance and low-latency processing.
+
+## Prerequisites
+Install [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/blob/main/docs/source/installation.md) to build Whisper and Mistral TensorRT engines. The README builds a docker image for TensorRT-LLM. 
+Instead of building a docker image, we can also refer to the README and the [Dockerfile.multi](https://github.com/NVIDIA/TensorRT-LLM/blob/main/docker/Dockerfile.multi) to install the required packages in the base pytroch docker image. Just make sure to use the correct base image as mentioned in the dockerfile and everything should go nice and smooth.
+
+### Build Whisper TensorRT Engine
+
+```{python}
+include_file('docker/scripts/build-whisper.sh')
+```
+
+### Build Mistral TensorRT Engine
+
+```{python}
+include_file('docker/scripts/build-mistral.sh')
+```
+
+### Build Phi TensorRT Engine
+
+```{python}
+include_file('docker/scripts/build-phi-2.sh')
+```
+
+## Build WhisperBot
+
+```{python}
+include_file('docker/scripts/setup-whisperbot.sh')
+```
+
+### Run WhisperBot with Whisper and Mistral/Phi-2
+
+Take the folder path for Whisper TensorRT model, folder_path and tokenizer_path for Mistral/Phi-2 TensorRT from the build phase. If a huggingface model is used to build mistral/phi-2 then just use the huggingface repo name as the tokenizer path.
+
+```{python}
+include_file('docker/scripts/run-whisperbot.sh')
+```
+
+- On the client side clone the repo, install the requirements and execute `run_client.py`
+```bash
+cd WhisperBot
+pip install -r requirements.txt
+python3 run_client.py
+```
+
+## Contact Us
+For questions or issues, please open an issue.
+Contact us at: marcus.edel@collabora.com, jpc@collabora.com, vineet.suryan@collabora.com
