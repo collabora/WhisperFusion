@@ -1,8 +1,8 @@
-# WhisperBot
+# WhisperFusion
 
 
-Welcome to WhisperBot. WhisperBot builds upon the capabilities of the
-[WhisperLive](https://github.com/collabora/WhisperLive) and
+Welcome to WhisperFusion. WhisperFusion builds upon the capabilities of
+the [WhisperLive](https://github.com/collabora/WhisperLive) and
 [WhisperSpeech](https://github.com/collabora/WhisperSpeech) by
 integrating Mistral, a Large Language Model (LLM), on top of the
 real-time speech-to-text pipeline. WhisperLive relies on OpenAI Whisper,
@@ -149,17 +149,17 @@ cp -r phi-2 "$dest"
 cp -r "$phi_path" "$dest/phi-orig-model"
 ```
 
-## Build WhisperBot
+## Build WhisperFusion
 
 > [!NOTE]
 >
-> These steps are included in `docker/scripts/setup-whisperbot.sh`
+> These steps are included in `docker/scripts/setup-whisperfusion.sh`
 
 Clone this repo and install requirements
 
 ``` bash
-[ -d "WhisperBot" ] || git clone https://github.com/collabora/WhisperBot.git
-cd WhisperBot
+[ -d "WhisperFusion" ] || git clone https://github.com/collabora/WhisperFusion.git
+cd WhisperFusion
 apt update
 apt install ffmpeg portaudio19-dev -y
 ```
@@ -174,7 +174,6 @@ Install all the other dependencies normally
 
 ``` bash
 pip install -r requirements.txt
-pip install openai-whisper whisperspeech soundfile
 ```
 
 force update huggingface_hub (tokenizers 0.14.1 spuriously require and
@@ -191,7 +190,7 @@ curl -L -o /root/.cache/whisper-live/silero_vad.onnx https://github.com/snakers4
 python -c 'from transformers.utils.hub import move_cache; move_cache()'
 ```
 
-### Run WhisperBot with Whisper and Mistral/Phi-2
+### Run WhisperFusion with Whisper and Mistral/Phi-2
 
 Take the folder path for Whisper TensorRT model, folder_path and
 tokenizer_path for Mistral/Phi-2 TensorRT from the build phase. If a
@@ -200,11 +199,11 @@ huggingface repo name as the tokenizer path.
 
 > [!NOTE]
 >
-> These steps are included in `docker/scripts/run-whisperbot.sh`
+> These steps are included in `docker/scripts/run-whisperfusion.sh`
 
 ``` bash
 test -f /etc/shinit_v2 && source /etc/shinit_v2
-cd WhisperBot
+cd WhisperFusion
 if [ "$1" != "mistral" ]; then
   exec python3 main.py --phi \
                   --whisper_tensorrt_path /root/whisper_small_en \
@@ -222,7 +221,7 @@ fi
   execute `run_client.py`
 
 ``` bash
-cd WhisperBot
+cd WhisperFusion
 pip install -r requirements.txt
 python3 run_client.py
 ```

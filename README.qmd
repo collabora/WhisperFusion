@@ -27,9 +27,9 @@ These steps are included in `{fname}`
     if code: print("```")
 ```
 
-# WhisperBot
+# WhisperFusion
 
-Welcome to WhisperBot. WhisperBot builds upon the capabilities of the [WhisperLive](https://github.com/collabora/WhisperLive) and [WhisperSpeech](https://github.com/collabora/WhisperSpeech) by integrating Mistral, a Large Language Model (LLM), on top of the real-time speech-to-text pipeline. WhisperLive relies on OpenAI Whisper, a powerful automatic speech recognition (ASR) system. Both Mistral and Whisper are optimized to run efficiently as TensorRT engines, maximizing performance and real-time processing capabilities.
+Welcome to WhisperFusion. WhisperFusion builds upon the capabilities of the [WhisperLive](https://github.com/collabora/WhisperLive) and [WhisperSpeech](https://github.com/collabora/WhisperSpeech) by integrating Mistral, a Large Language Model (LLM), on top of the real-time speech-to-text pipeline. WhisperLive relies on OpenAI Whisper, a powerful automatic speech recognition (ASR) system. Both Mistral and Whisper are optimized to run efficiently as TensorRT engines, maximizing performance and real-time processing capabilities.
 
 ## Features
 - **Real-Time Speech-to-Text**: Utilizes OpenAI WhisperLive to convert spoken language into text in real-time.
@@ -60,23 +60,23 @@ include_file('docker/scripts/build-mistral.sh')
 include_file('docker/scripts/build-phi-2.sh')
 ```
 
-## Build WhisperBot
+## Build WhisperFusion
 
 ```{python}
-include_file('docker/scripts/setup-whisperbot.sh')
+include_file('docker/scripts/setup-whisperfusion.sh')
 ```
 
-### Run WhisperBot with Whisper and Mistral/Phi-2
+### Run WhisperFusion with Whisper and Mistral/Phi-2
 
 Take the folder path for Whisper TensorRT model, folder_path and tokenizer_path for Mistral/Phi-2 TensorRT from the build phase. If a huggingface model is used to build mistral/phi-2 then just use the huggingface repo name as the tokenizer path.
 
 ```{python}
-include_file('docker/scripts/run-whisperbot.sh')
+include_file('docker/scripts/run-whisperfusion.sh')
 ```
 
 - On the client side clone the repo, install the requirements and execute `run_client.py`
 ```bash
-cd WhisperBot
+cd WhisperFusion
 pip install -r requirements.txt
 python3 run_client.py
 ```
