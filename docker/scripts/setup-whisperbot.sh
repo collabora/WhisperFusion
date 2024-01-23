@@ -7,15 +7,11 @@ cd WhisperBot
 apt update
 apt install ffmpeg portaudio19-dev -y
 
-## NVidia containers are based on unreleased PyTorch versions so we have to manually install
-## torchaudio from source (`pip install torchaudio` would pull all new PyTorch and CUDA versions)
-#apt install -y cmake
-#TORCH_CUDA_ARCH_LIST="8.9 9.0" pip install --no-build-isolation git+https://github.com/pytorch/audio.git
+## Install torchaudio matching the PyTorch from the base image
+pip install --extra-index-url https://download.pytorch.org/whl/cu121 torchaudio
 
 ## Install all the other dependencies normally
-pip install --extra-index-url https://download.pytorch.org/whl/cu121 torchaudio
 pip install -r requirements.txt
-pip install openai-whisper whisperspeech soundfile
 
 ## force update huggingface_hub (tokenizers 0.14.1 spuriously require and ancient <=0.18 version)
 pip install -U huggingface_hub
@@ -29,4 +25,3 @@ mkdir -p /root/.cache/whisper-live/
 curl -L -o /root/.cache/whisper-live/silero_vad.onnx https://github.com/snakers4/silero-vad/raw/master/files/silero_vad.onnx
 
 python -c 'from transformers.utils.hub import move_cache; move_cache()'
-

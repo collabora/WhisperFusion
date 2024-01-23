@@ -29,7 +29,7 @@ These steps are included in `{fname}`
 
 # WhisperBot
 
-Welcome to WhisperBot. WhisperBot builds upon the capabilities of the [WhisperLive]() by integrating Mistral, a Large Language Model (LLM), on top of the real-time speech-to-text pipeline. WhisperLive relies on OpenAI Whisper, a powerful automatic speech recognition (ASR) system. Both Mistral and Whisper are optimized to run efficiently as TensorRT engines, maximizing performance and real-time processing capabilities.
+Welcome to WhisperBot. WhisperBot builds upon the capabilities of the [WhisperLive](https://github.com/collabora/WhisperLive) and [WhisperSpeech](https://github.com/collabora/WhisperSpeech) by integrating Mistral, a Large Language Model (LLM), on top of the real-time speech-to-text pipeline. WhisperLive relies on OpenAI Whisper, a powerful automatic speech recognition (ASR) system. Both Mistral and Whisper are optimized to run efficiently as TensorRT engines, maximizing performance and real-time processing capabilities.
 
 ## Features
 - **Real-Time Speech-to-Text**: Utilizes OpenAI WhisperLive to convert spoken language into text in real-time.
@@ -45,19 +45,19 @@ Instead of building a docker image, we can also refer to the README and the [Doc
 ### Build Whisper TensorRT Engine
 
 ```{python}
-include_file('docker/scripts/setup-whisper.sh')
+include_file('docker/scripts/build-whisper.sh')
 ```
 
 ### Build Mistral TensorRT Engine
 
 ```{python}
-include_file('docker/scripts/setup-mistral.sh')
+include_file('docker/scripts/build-mistral.sh')
 ```
 
 ### Build Phi TensorRT Engine
 
 ```{python}
-include_file('docker/scripts/setup-phi-2.sh')
+include_file('docker/scripts/build-phi-2.sh')
 ```
 
 ## Build WhisperBot
