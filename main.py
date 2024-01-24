@@ -17,7 +17,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--whisper_tensorrt_path',
                         type=str,
-                        default="/root/TensorRT-LLM/examples/whisper/whisper_small_en",
+                        default="/root/TensorRT-LLM-examples/whisper/whisper_small_en",
                         help='Whisper TensorRT model path')
     parser.add_argument('--mistral',
                         action="store_true",
@@ -35,11 +35,11 @@ def parse_arguments():
                         help='Phi')
     parser.add_argument('--phi_tensorrt_path',
                         type=str,
-                        default="/root/TensorRT-LLM/examples/phi/phi_engine",
+                        default="/root/TensorRT-LLM-examples/phi/phi_engine",
                         help='Phi TensorRT model path')
     parser.add_argument('--phi_tokenizer_path',
                         type=str,
-                        default="/root/TensorRT-LLM/examples/phi/phi-2",
+                        default="/root/TensorRT-LLM-examples/phi/dolphin-2_6-phi-2",
                         help='Phi Tokenizer path')
     return parser.parse_args()
 
