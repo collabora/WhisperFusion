@@ -14,7 +14,7 @@ download_and_build_phi_model() {
                      --model_dir=dolphin-2_6-phi-2>&1 | tee build.log
     echo "Phi Engine Built."
     echo "==============================="
-    echo "Model is located at: /home/TensorRT-LLM/examples/phi/phi_engine"
+    echo "Model is located at: /root/TensorRT-LLM-examples/phi/phi_engine"
     
     # Cleanup, if you want to save space as this is not needed anymore
     rm -rf phi-2/model-0000*.safetensors
