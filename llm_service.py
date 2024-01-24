@@ -325,6 +325,7 @@ class TensorRTLLMEngine:
 def clean_llm_output(output):
     output = output.replace("\n\nDolphin\n\n", "")
     output = output.replace("\nDolphin\n\n", "")
+
     if not output.endswith('.') and not output.endswith('?') and not output.endswith('!'):
         last_punct = output.rfind('.')
         last_q = output.rfind('?')
@@ -335,15 +336,9 @@ def clean_llm_output(output):
         if last_ex > last_punct:
             last_punct = last_ex
         
-        last_c = output.rfind(',')
-        if last_c > last_punct:
-            last_punct = last_c
-        
         if last_punct > 0:
             output = output[:last_punct+1]
-    
-    if output.endswith(','):
-        output[-1] = '.'
+
     return output
    
     
