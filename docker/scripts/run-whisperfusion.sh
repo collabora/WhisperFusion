@@ -2,7 +2,7 @@
 
 test -f /etc/shinit_v2 && source /etc/shinit_v2
 
-cd WhisperBot
+cd WhisperFusion
 if [ "$1" != "mistral" ]; then
   exec python3 main.py --phi \
                   --whisper_tensorrt_path /root/whisper_small_en \

@@ -3,4 +3,4 @@
 ./setup-whisper.sh
 #./setup-mistral.sh
 ./setup-phi-2.sh
-./setup-whisperbot.sh
+./setup-whisperfusion.sh

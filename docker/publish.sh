@@ -1,4 +1,4 @@
 #!/bin/bash -e
 
-docker push ghcr.io/collabora/whisperbot-base:latest
-docker push ghcr.io/collabora/whisperbot:latest
+docker push ghcr.io/collabora/whisperfusion-base:latest
+docker push ghcr.io/collabora/whisperfusion:latest
