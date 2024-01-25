@@ -54,7 +54,7 @@ class TranscriptionServer:
         self.clients_start_time = {}
         self.max_clients = 4
         self.max_connection_time = 600
-        print("done loading")
+        self.transcriber = None
 
     def get_wait_time(self):
         """
@@ -113,6 +113,9 @@ class TranscriptionServer:
             websocket.close()
             del websocket
             return
+        
+        if self.transcriber is None:
+            self.transcriber = WhisperTRTLLM(whisper_tensorrt_path, assets_dir="assets", device="cuda")
 
         client = ServeClient(
             websocket,
@@ -122,7 +125,7 @@ class TranscriptionServer:
             client_uid=options["uid"],
             transcription_queue=transcription_queue,
             llm_queue=llm_queue,
-            model_path=whisper_tensorrt_path
+            transcriber=self.transcriber
         )
 
         self.clients[websocket] = client
@@ -237,7 +240,7 @@ class ServeClient:
         client_uid=None,
         transcription_queue=None,
         llm_queue=None,
-        model_path=None
+        transcriber=None
         ):
         """
         Initialize a ServeClient instance.
@@ -254,16 +257,15 @@ class ServeClient:
             client_uid (str, optional): A unique identifier for the client. Defaults to None.
 
         """
+        if transcriber is None:
+            raise ValueError("Transcriber is None.")
+        self.transcriber = transcriber
         self.client_uid = client_uid
         self.transcription_queue = transcription_queue
         self.llm_queue = llm_queue
         self.data = b""
         self.frames = b""
-        self.language = language if multilingual else "en"
         self.task = task
-        self.transcriber = WhisperTRTLLM(model_path, False, "assets", device="cuda")
-
-
         self.last_prompt = None
 
         self.timestamp_offset = 0.0
