@@ -54,9 +54,7 @@ class TranscriptionServer:
         self.clients_start_time = {}
         self.max_clients = 4
         self.max_connection_time = 600
-        self.model_path = None
         self.transcriber = None
-        print("done loading")
 
     def get_wait_time(self):
         """
@@ -115,9 +113,9 @@ class TranscriptionServer:
             websocket.close()
             del websocket
             return
-        if self.model_path is None or self.model_path != whisper_tensorrt_path:
-            self.model_path = whisper_tensorrt_path
-            self.transcriber = WhisperTRTLLM(self.model_path, assets_dir="assets", device="cuda")
+        
+        if self.transcriber is None:
+            self.transcriber = WhisperTRTLLM(whisper_tensorrt_path, assets_dir="assets", device="cuda")
 
         client = ServeClient(
             websocket,
