@@ -1,5 +1,10 @@
 # WhisperFusion
 
+<h2 align="center">
+  <a href="https://www.youtube.com/watch?v=_PnaP0AQJnk"><img
+src="https://img.youtube.com/vi/_PnaP0AQJnk/0.jpg" style="background-color:rgba(0,0,0,0);" height=300 alt="WhisperFusion"></a>
+  <br><br>Doing math with WhisperFusion: Ultra-low latency conversations with an AI chatbot<br><br>
+</h2>
 
 Welcome to WhisperFusion. WhisperFusion builds upon the capabilities of
 the [WhisperLive](https://github.com/collabora/WhisperLive) and
