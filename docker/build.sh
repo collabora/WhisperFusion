@@ -1,10 +1,17 @@
 #!/bin/bash -e
 
+if [ -n "$1" ]; then
+  CUDA_ARCH="$1"
+  BASE_IMAGE_BUILD_ARG="--build-arg CUDA_ARCH=$CUDA_ARCH"
+else
+  BASE_IMAGE_BUILD_ARG=""
+fi
+
 [ -n "$VERBOSE" ] && ARGS="--progress plain"
 
 (
   cd base-image &&
-  docker build $ARGS -t ghcr.io/collabora/whisperfusion-base:latest .
+  docker build $ARGS $BASE_IMAGE_BUILD_ARG -t ghcr.io/collabora/whisperfusion-base:latest .
 )
 
 mkdir -p scratch-space

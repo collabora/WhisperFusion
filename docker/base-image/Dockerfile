@@ -4,9 +4,10 @@ ARG BASE_IMAGE=nvcr.io/nvidia/cuda
 ARG BASE_TAG=12.2.2-devel-ubuntu22.04
 
 FROM ${BASE_IMAGE}:${BASE_TAG} as base
-
+ARG CUDA_ARCH
 WORKDIR /root
 COPY install-deps.sh /root
+ENV CUDA_ARCH=${CUDA_ARCH}
 RUN bash install-deps.sh && rm install-deps.sh
 
 COPY install-trt-llm.sh /root
