@@ -52,6 +52,7 @@ optimized with torch.compile.
 ```bash
  bash build.sh 86-real
 ```
+This should build the `ghcr.io/collabora/whisperfusion:latest` for RTX 3090.
 
 ## Contact Us
 
