@@ -1,6 +1,8 @@
+import time
 import json
 from pathlib import Path
 from typing import Optional
+
 import logging
 logging.basicConfig(level = logging.INFO)
 
@@ -162,7 +164,6 @@ class TensorRTLLMEngine:
                 outputs = output_ids[batch_idx][beam][
                     output_begin:output_end].tolist()
                 output_text = self.tokenizer.decode(outputs)
-                logging.info(f"[LLM] output: {output_text}")
                 output.append(output_text)
         return output
     
@@ -206,7 +207,7 @@ class TensorRTLLMEngine:
             tokenizer_path,
         )
         
-        logging.info("[LLM] loaded: True")
+        logging.info("[LLM INFO:] Loaded LLM TensorRT Engine.")
 
         conversation_history = {}
 
@@ -215,7 +216,6 @@ class TensorRTLLMEngine:
             # Get the last transcription output from the queue
             transcription_output = transcription_queue.get()
             if transcription_queue.qsize() != 0:
-                logging.info("[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!")
                 continue
             
             if transcription_output["uid"] not in conversation_history:
@@ -227,21 +227,23 @@ class TensorRTLLMEngine:
             if self.last_prompt == prompt:
                 if self.last_output is not None and transcription_output["eos"]:
                     self.eos = transcription_output["eos"]
-                    llm_queue.put({"uid": transcription_output["uid"], "llm_output": self.last_output, "eos": self.eos})
+                    llm_queue.put({
+                        "uid": transcription_output["uid"],
+                        "llm_output": self.last_output,
+                        "eos": self.eos,
+                        "latency": self.infer_time
+                    })
                     audio_queue.put({"llm_output": self.last_output, "eos": self.eos})
                     conversation_history[transcription_output["uid"]].append(
                         (transcription_output['prompt'].strip(), self.last_output[0].strip())
                     )
-                    print(f"History: {conversation_history}")
                     continue
 
             # input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
             input_text=[self.format_prompt_chatml(prompt, conversation_history[transcription_output["uid"]], system_prompt="You are Dolphin, a helpful AI assistant")]
-            logging.info(f"[LLM INFO:] Formatted prompt with history...:\n{input_text}")
             
             self.eos = transcription_output["eos"]
 
-            # logging.info(f"[LLM INFO:] WhisperLive prompt: {prompt}, eos: {self.eos}")
             batch_input_ids = self.parse_input(
                 input_text=input_text,
                 add_special_tokens=True,
@@ -250,7 +252,9 @@ class TensorRTLLMEngine:
             )
 
             input_lengths = [x.size(0) for x in batch_input_ids]
-            print(f"[LLM INFO:] Input lengths: {input_lengths} / 1024")
+
+            logging.info(f"[LLM INFO:] Running LLM Inference with WhisperLive prompt: {prompt}, eos: {self.eos}")
+            start = time.time()
             with torch.no_grad():
                 outputs = self.runner.generate(
                     batch_input_ids,
@@ -289,7 +293,6 @@ class TensorRTLLMEngine:
                 
                 # Interrupted by transcription queue
                 if output is None:
-                    logging.info(f"[LLM] interrupted by transcription queue!!!!!!!!!!!!!!!!!!!!!!!!")
                     continue
             else:
                 output_ids = outputs['output_ids']
@@ -306,14 +309,21 @@ class TensorRTLLMEngine:
                     sequence_lengths,
                     transcription_queue
                 )
+            self.infer_time = time.time() - start
             
             # if self.eos:
             if output is not None:
                 output[0] = clean_llm_output(output[0])
                 self.last_output = output
                 self.last_prompt = prompt
-                llm_queue.put({"uid": transcription_output["uid"], "llm_output": output, "eos": self.eos})
+                llm_queue.put({
+                    "uid": transcription_output["uid"],
+                    "llm_output": output,
+                    "eos": self.eos,
+                    "latency": self.infer_time
+                })
                 audio_queue.put({"llm_output": output, "eos": self.eos})
+                logging.info(f"[LLM INFO:] Output: {output[0]}\nLLM inference done in {self.infer_time} ms\n\n")
             
             if self.eos:
                 conversation_history[transcription_output["uid"]].append(
@@ -325,6 +335,8 @@ class TensorRTLLMEngine:
 def clean_llm_output(output):
     output = output.replace("\n\nDolphin\n\n", "")
     output = output.replace("\nDolphin\n\n", "")
+    output = output.replace("Dolphin: ", "")
+    output = output.replace("Assistant: ", "")
 
     if not output.endswith('.') and not output.endswith('?') and not output.endswith('!'):
         last_punct = output.rfind('.')
@@ -340,19 +352,3 @@ def clean_llm_output(output):
             output = output[:last_punct+1]
 
     return output
-   
-    
-if __name__=="__main__":
-    llm = TensorRTLLMEngine()
-    llm.initialize_model(
-        "/root/TensorRT-LLM/examples/llama/tmp/mistral/7B/trt_engines/fp16/1-gpu",
-        "teknium/OpenHermes-2.5-Mistral-7B",
-    )
-    logging.info("intialized")
-    for i in range(1):
-        output = llm(
-            ["Born in north-east France, Soyer trained as a"], streaming=True
-        )
-    logging.info(output)
-
-

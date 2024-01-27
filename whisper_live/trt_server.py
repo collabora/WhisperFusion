@@ -97,7 +97,7 @@ class TranscriptionServer:
         self.vad_model = VoiceActivityDetection()
         self.vad_threshold = 0.5
 
-        logging.info("New client connected")
+        logging.info("[Whisper INFO:] New client connected")
         options = websocket.recv()
         options = json.loads(options)
 
@@ -171,8 +171,7 @@ class TranscriptionServer:
                 self.clients[websocket].cleanup()
                 self.clients.pop(websocket)
                 self.clients_start_time.pop(websocket)
-                logging.info("Connection Closed.")
-                logging.info(self.clients)
+                logging.info("[Whisper INFO:] Connection Closed.")
                 del websocket
                 break
 
@@ -282,6 +281,7 @@ class ServeClient:
         self.transcript = []
         self.prompt = None
         self.send_last_n_segments = 10
+        self.segment_inference_time = []
 
         # text formatting
         self.wrapper = textwrap.TextWrapper(width=50)
@@ -362,13 +362,12 @@ class ServeClient:
                     if llm_response:
                         eos = llm_response["eos"]
                         if eos:
-                            logging.info(f"[LLM INFO:] sending response to client : {llm_response}")
                             self.websocket.send(json.dumps(llm_response))
             except queue.Empty:
                 pass
             
             if self.exit:
-                logging.info("Exiting speech to text thread")
+                logging.info("[Whisper INFO:] Exiting speech to text thread")
                 break
             
             if self.frames_np is None:
@@ -390,9 +389,12 @@ class ServeClient:
 
             try:
                 input_sample = input_bytes.copy()
-
+                start = time.time()
                 mel, duration = self.transcriber.log_mel_spectrogram(input_sample)
                 last_segment = self.transcriber.transcribe(mel)
+                infer_time = time.time() - start
+                self.segment_inference_time.append(infer_time)
+
                 segments = []
                 if len(last_segment):
                     segments.append({"text": last_segment})
@@ -403,18 +405,22 @@ class ServeClient:
                                 json.dumps({
                                     "uid": self.client_uid,
                                     "segments": segments,
-                                    "eos": self.eos
+                                    "eos": self.eos,
+                                    "latency": infer_time
                                 })
                             )
                             
                         self.transcription_queue.put({"uid": self.client_uid, "prompt": self.prompt, "eos": self.eos})
                         if self.eos:
-                            # self.append_segment(last_segment)
                             self.timestamp_offset += duration
-                            logging.info(f"[INFO]: {segments}, eos: {self.eos}")
+                            logging.info(f"[Whisper INFO]: {self.prompt}, eos: {self.eos}")
                             logging.info(
-                                f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
-                            )
+                                f"[Whisper INFO]: Average inference time {sum(self.segment_inference_time) / len(self.segment_inference_time)}\n\n")
+                            self.segment_inference_time = []
+                            
+                            # logging.info(
+                            #     f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
+                            # )
                         
                             
                             
