@@ -417,10 +417,6 @@ class ServeClient:
                             logging.info(
                                 f"[Whisper INFO]: Average inference time {sum(self.segment_inference_time) / len(self.segment_inference_time)}\n\n")
                             self.segment_inference_time = []
-                            
-                            # logging.info(
-                            #     f"[INFO:] Processed : {self.timestamp_offset} seconds / {self.frames_np.shape[0] / self.RATE} seconds"
-                            # )
                         
                             
                             
