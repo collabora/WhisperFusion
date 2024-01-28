@@ -211,18 +211,8 @@ class ServeClient:
         timestamp_offset (float): The offset in audio timestamps.
         frames_np (numpy.ndarray): NumPy array to store audio frames.
         frames_offset (float): The offset in audio frames.
-        text (list): List of transcribed text segments.
-        current_out (str): The current incomplete transcription.
-        prev_out (str): The previous incomplete transcription.
-        t_start (float): Timestamp for the start of transcription.
         exit (bool): A flag to exit the transcription thread.
-        same_output_threshold (int): Threshold for consecutive same output segments.
-        show_prev_out_thresh (int): Threshold for showing previous output segments.
-        add_pause_thresh (int): Threshold for adding a pause (blank) segment.
         transcript (list): List of transcribed segments.
-        send_last_n_segments (int): Number of last segments to send to the client.
-        wrapper (textwrap.TextWrapper): Text wrapper for formatting text.
-        pick_previous_segments (int): Number of previous segments to include in the output.
         websocket: The WebSocket connection for the client.
     """
     RATE = 16000
@@ -270,22 +260,10 @@ class ServeClient:
         self.timestamp_offset = 0.0
         self.frames_np = None
         self.frames_offset = 0.0
-        self.text = []
-        self.current_out = ''
-        self.prev_out = ''
-        self.t_start=None
         self.exit = False
-        self.same_output_threshold = 0
-        self.show_prev_out_thresh = 5   # if pause(no output from whisper) show previous output for 5 seconds
-        self.add_pause_thresh = 3       # add a blank to segment list as a pause(no speech) for 3 seconds
         self.transcript = []
         self.prompt = None
-        self.send_last_n_segments = 10
         self.segment_inference_time = []
-
-        # text formatting
-        self.wrapper = textwrap.TextWrapper(width=50)
-        self.pick_previous_segments = 2
 
         # threading
         self.websocket = websocket
