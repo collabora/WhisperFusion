@@ -50,9 +50,11 @@ class WhisperSpeechTTS:
 
             # only process if the output updated
             if self.last_llm_response != llm_output.strip():
-                logging.info("[WhisperSpeech INFO:] Tunning TTS inference ...")
                 try:
+                    start = time.time()
                     audio = self.pipe.generate(llm_output.strip(), step_callback=should_abort)
+                    inference_time = time.time() - start
+                    logging.info(f"[WhisperSpeech INFO:] TTS inference done in {inference_time} ms.\n\n")
                     self.output_audio = audio.cpu().numpy()
                     self.last_llm_response = llm_output.strip()
                 except TimeoutError:
