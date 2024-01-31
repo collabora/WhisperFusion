@@ -32,21 +32,43 @@ optimized with torch.compile.
   code into optimized kernels.
 
 ## Getting Started
-- We provide a pre-built TensorRT-LLM docker container that has both whisper and
+
+### Backend
+
+- A pre-built TensorRT-LLM docker container is provided that has both whisper and
   phi converted to TensorRT engines and WhisperSpeech model is pre-downloaded to 
-  quickly start interacting with WhisperFusion.
+  quickly start interacting with WhisperFusion. It is built for cuda-architectures 89 and 90.
 ```bash
  docker run --gpus all --shm-size 64G -p 6006:6006 -p 8888:8888 -it ghcr.io/collabora/whisperfusion:latest
 ```
+#### Hosting on Google Cloud Compute
 
-- Start Web GUI
+1. Configure an instance with a GPU with `>= 24GB` RAM and preferably cuda-architectures versions 89 and 90.
+2. Configure the boot disk
+	a) Pick the Operating System "Deep Learning on Linux"
+	 b) Pick a Version which has "CUDA 12.1 Installed" or later.
+	 c) Allocate ample disk space: `>= 256GB`
+3. Create a Firewall Rule allowing ports tcp: 6006 and 8888. 
+     a) Assign this Filewall Rule to the above instance
+4. Launch the instance and, when prompted, agree to install the CUDA driver
+5. Once finished, run the above docker command to start a container with `Whisper-Fusion`
+    a) On the first run, it should download a few models. If no errors are printed, then it booted successfully.
+
+### Frontend
+
+#### Start Web GUI
+1. If you are hosting the backend remotely, open an SSH tunnel for ports 6006 and 8888 from localhost to the External IP of the backend server. These tunnels must remain open for the duration of the frontend.
+	- `ssh -N -n -L 6006:localhost:6006 <External IP>`
+	- `ssh -N -n -L 8888:localhost:8888 <External IP>`
+
+2. Run the frontend
 ```bash
  cd examples/chatbot/html
  python -m http.server
 ```
 
 ## Build Docker Image
-- We provide the docker image for cuda-architecures 89 and 90. If you have a GPU
+- A docker image for cuda-architecures 89 and 90 is provided. If you have a GPU
   with a different cuda architecture. For e.g. to build for RTX 3090 with cuda-
   architecture 86
 ```bash
