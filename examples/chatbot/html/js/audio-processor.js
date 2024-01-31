@@ -9,6 +9,7 @@ class AudioStreamProcessor extends AudioWorkletProcessor {
   process(inputs, outputs, parameters) {
     const input = inputs[0];
     const output = outputs[0];
+    let channelCount = Math.min(input.length, output.length);
 
     for (let i = 0; i < input[0].length; i++) {
       this.buffer[this.bufferPointer++] = input[0][i];
@@ -20,7 +21,7 @@ class AudioStreamProcessor extends AudioWorkletProcessor {
       }
     }
 
-    for (let channel = 0; channel < input.length; ++channel) {
+    for (let channel = 0; channel < channelCount; ++channel) {
       output[channel].set(input[channel]);
     }
 
