@@ -9,4 +9,5 @@ kaldialign
 braceexpand
 openai-whisper
 whisperspeech
+whisper-live==0.0.11
 soundfile
