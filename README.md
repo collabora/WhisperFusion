@@ -31,6 +31,13 @@ optimized with torch.compile.
   inference which makes PyTorch code run faster by JIT-compiling PyTorch
   code into optimized kernels.
 
+## Hardware Requirements
+
+- A GPU with at least 24GB of RAM
+- For optimal latency, the GPU should have a similar FP16 (half) TFLOPS as the RTX 4090. Here are the [hardware specifications](https://www.techpowerup.com/gpu-specs/geforce-rtx-4090.c3889) for the RTX 4090.
+
+The demo was run on a single RTX 4090 GPU. WhisperFusion uses the Nvidia TensorRT-LLM library for CUDA optimized versions of popular LLM models. TensorRT-LLM supports multiple GPUs, so it should be possible to run WhisperFusion for even better performance on multiple GPUs.
+
 ## Getting Started
 - We provide a pre-built TensorRT-LLM docker container that has both whisper and
   phi converted to TensorRT engines and WhisperSpeech model is pre-downloaded to 
