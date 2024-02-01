@@ -44,30 +44,34 @@ optimized with torch.compile.
 #### Hosting on Google Cloud Compute
 
 1. Configure an instance with a GPU with `>= 24GB` RAM and preferably cuda-architectures versions 89 and 90.
-2. Configure the boot disk
+    a) For optimal latency, an instance with multiple GPUs may be necessary to achieve a total FP16 (half) TFLOPS as recommended in the Hardware Requirements section.
+3. Configure the boot disk
 	a) Pick the Operating System "Deep Learning on Linux"
 	 b) Pick a Version which has "CUDA 12.1 Installed" or later.
 	 c) Allocate ample disk space: `>= 256GB`
-3. Create a Firewall Rule allowing ports tcp: 6006 and 8888. 
+4. Create a Firewall Rule allowing ports tcp: 6006 and 8888. 
      a) Assign this Filewall Rule to the above instance
-4. Launch the instance and, when prompted, agree to install the CUDA driver
-5. Once finished, run the above docker command to start a container with `Whisper-Fusion`
+5. Launch the instance and, when prompted, agree to install the CUDA driver
+6. Once finished, run the above docker command to start a container with `Whisper-Fusion`
     a) On the first run, it should download a few models. If no errors are printed, then it booted successfully.
 
 ### Frontend
 
 #### Start Web GUI
-1. If you are hosting the backend remotely, open an SSH tunnel for ports 6006 and 8888 from localhost to the External IP of the backend server. These tunnels must remain open for the duration of the frontend.
+1. The frontend can be hosted on the same server as the backend or locally on your computer.
+    a) If you choose to host it on the same server as the backend, simply make sure that port tcp:8000 is not blocked by any firewalls. You may need to add a firewall rule to allow this port.
+    b) If you choose to host it locally, you must open an SSH tunnel for ports 6006 and 8888 from localhost to the External IP of the backend server. These tunnels must remain open for the duration of the frontend.
 	- `ssh -N -n -L 6006:localhost:6006 <External IP>`
 	- `ssh -N -n -L 8888:localhost:8888 <External IP>`
 
-2. Run the frontend
+4. Run the frontend.
 ```bash
  cd examples/chatbot/html
  python -m http.server
 ```
 
 ## Build Docker Image
+
 - A docker image for cuda-architecures 89 and 90 is provided. If you have a GPU
   with a different cuda architecture. For e.g. to build for RTX 3090 with cuda-
   architecture 86
