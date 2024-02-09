@@ -17,10 +17,10 @@ class WhisperSpeechTTS:
     def run(self, host, port, audio_queue=None, should_send_server_ready=None):
         # initialize and warmup model
         self.initialize_model()
-        logging.info("[WhisperSpeech INFO:] Warming up torch compile model. Please wait ...")
+        logging.info("\n[WhisperSpeech INFO:] Warming up torch compile model. Please wait ...\n")
         for i in range(3):
             self.pipe.generate("Hello, I am warming up.")
-
+        logging.info("[WhisperSpeech INFO:] Warmed up Whisper Speech torch compile model. Connect to the WebGUI now.")
         should_send_server_ready.value = True
 
         with serve(
