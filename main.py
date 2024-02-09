@@ -5,6 +5,7 @@ import ssl
 import time
 import sys
 import functools
+import ctypes
 
 from multiprocessing import Process, Manager, Value, Queue
 
@@ -69,7 +70,7 @@ if __name__ == "__main__":
     
     manager = Manager()
     shared_output = manager.list()
-
+    should_send_server_ready = Value(ctypes.c_bool, False)
     transcription_queue = Queue()
     llm_queue = Queue()
     audio_queue = Queue()
@@ -83,7 +84,8 @@ if __name__ == "__main__":
             6006,
             transcription_queue,
             llm_queue,
-            args.whisper_tensorrt_path
+            args.whisper_tensorrt_path,
+            should_send_server_ready
         )
     )
     whisper_process.start()
@@ -106,7 +108,7 @@ if __name__ == "__main__":
 
     # audio process
     tts_runner = WhisperSpeechTTS()
-    tts_process = multiprocessing.Process(target=tts_runner.run, args=("0.0.0.0", 8888, audio_queue))
+    tts_process = multiprocessing.Process(target=tts_runner.run, args=("0.0.0.0", 8888, audio_queue, should_send_server_ready))
     tts_process.start()
 
     llm_process.join()
