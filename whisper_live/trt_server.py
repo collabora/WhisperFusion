@@ -126,7 +126,6 @@ class TranscriptionServer:
             transcription_queue=transcription_queue,
             llm_queue=llm_queue,
             transcriber=self.transcriber,
-            should_send_server_ready=should_send_server_ready,
         )
 
         self.clients[websocket] = client
