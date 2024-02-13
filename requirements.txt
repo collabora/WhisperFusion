@@ -7,6 +7,7 @@ websocket-client
 tiktoken==0.3.3
 kaldialign
 braceexpand
+openai
 openai-whisper
 whisperspeech
 soundfile

@@ -10,7 +10,7 @@ import ctypes
 from multiprocessing import Process, Manager, Value, Queue
 
 from whisper_live.trt_server import TranscriptionServer
-from llm_service import TensorRTLLMEngine
+from gpt_service import GPTEngine
 from tts_service import WhisperSpeechTTS
 
 
@@ -42,6 +42,9 @@ def parse_arguments():
                         type=str,
                         default="/root/TensorRT-LLM/examples/phi/phi-2",
                         help='Phi Tokenizer path')
+    parser.add_argument('--gpt',
+                        action="store_true",
+                        help='GPT')
     return parser.parse_args()
 
 
@@ -90,15 +93,11 @@ if __name__ == "__main__":
     )
     whisper_process.start()
 
-    llm_provider = TensorRTLLMEngine()
+    llm_provider = GPTEngine()
     # llm_provider = MistralTensorRTLLMProvider()
     llm_process = multiprocessing.Process(
         target=llm_provider.run,
         args=(
-            # args.mistral_tensorrt_path,
-            # args.mistral_tokenizer_path,
-            args.phi_tensorrt_path,
-            args.phi_tokenizer_path,
             transcription_queue,
             llm_queue,
             audio_queue,
