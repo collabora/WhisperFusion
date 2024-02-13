@@ -73,7 +73,7 @@ class TranscriptionServer:
 
         return wait_time / 60
 
-    def recv_audio(self, websocket, transcription_queue=None, llm_queue=None, whisper_tensorrt_path=None):
+    def recv_audio(self, websocket, transcription_queue=None, llm_queue=None, whisper_tensorrt_path=None, should_send_server_ready=None):
         """
         Receive audio chunks from a client in an infinite loop.
         
@@ -125,7 +125,7 @@ class TranscriptionServer:
             client_uid=options["uid"],
             transcription_queue=transcription_queue,
             llm_queue=llm_queue,
-            transcriber=self.transcriber
+            transcriber=self.transcriber,
         )
 
         self.clients[websocket] = client
@@ -175,7 +175,7 @@ class TranscriptionServer:
                 del websocket
                 break
 
-    def run(self, host, port=9090, transcription_queue=None, llm_queue=None, whisper_tensorrt_path=None):
+    def run(self, host, port=9090, transcription_queue=None, llm_queue=None, whisper_tensorrt_path=None, should_send_server_ready=None):
         """
         Run the transcription server.
 
@@ -183,12 +183,17 @@ class TranscriptionServer:
             host (str): The host address to bind the server.
             port (int): The port number to bind the server.
         """
+        # wait for WhisperSpeech to warmup
+        while not should_send_server_ready.value:
+            time.sleep(0.5)
+        
         with serve(
             functools.partial(
                 self.recv_audio,
                 transcription_queue=transcription_queue,
                 llm_queue=llm_queue,
-                whisper_tensorrt_path=whisper_tensorrt_path
+                whisper_tensorrt_path=whisper_tensorrt_path,
+                should_send_server_ready=should_send_server_ready,
             ),
             host,
             port
@@ -229,7 +234,7 @@ class ServeClient:
         client_uid=None,
         transcription_queue=None,
         llm_queue=None,
-        transcriber=None
+        transcriber=None,
         ):
         """
         Initialize a ServeClient instance.
@@ -271,7 +276,7 @@ class ServeClient:
         self.eos = False
         self.trans_thread = threading.Thread(target=self.speech_to_text)
         self.trans_thread.start()
-
+        
         self.websocket.send(
             json.dumps(
                 {
