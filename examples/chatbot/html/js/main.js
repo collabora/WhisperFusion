@@ -12,7 +12,8 @@ var recordingTime = 0;
 var server_state = 0;
 var websocket_audio = null;
 let audioContext_tts = null;
-var you_name = "Marcus"
+var your_name = "Alan Turing";
+var your_img_src = "turing.png";
 
 var audioContext = null;
 var audioWorkletNode = null;
@@ -162,20 +163,7 @@ function initWebSocket() {
       } else if ("segments" in data) {
         if (new_transcription_element_state) {
             available_transcription_elements = available_transcription_elements + 1;
-
-            var img_src = "0.png";
-            if (you_name.toLowerCase() == "marcus") {
-                you_name = "Marcus";
-                img_src = "0.png";
-            } else if (you_name.toLowerCase() == "vineet") {
-                you_name = "Vineet";
-                img_src = "1.png";
-            } else if (you_name.toLowerCase() == "jakub") {
-                you_name = "Jakub";
-                img_src = "2.png";
-            }
-
-            new_transcription_element(you_name, img_src);
+            new_transcription_element(your_name, your_img_src);
             new_text_element("<p>" +  data["segments"][0].text + "</p>", "transcription-" + available_transcription_elements);
             new_transcription_element_state = false;
         }
@@ -335,6 +323,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     if (urlParams.has('name')) {
-        you_name = urlParams.get('name')
+        your_name = urlParams.get('name')
     }
  }, false);
