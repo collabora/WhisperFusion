@@ -48,9 +48,7 @@ cp docker/scripts/build-* docker/scripts/run-whisperfusion.sh docker/scratch-spa
 
 # Set the CUDA_ARCH environment variable based on your GPU
 # Use '86-real' for RTX 3090, '89-real' for RTX 4090
-export CUDA_ARCH=86-real
-
-docker compose build
+CUDA_ARCH=86-real docker compose build
 docker compose up
 ```
 
