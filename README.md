@@ -52,7 +52,7 @@ CUDA_ARCH=86-real docker compose build
 docker compose up
 ```
 
-- Start Web GUI on `https://localhost:8000`
+- Start Web GUI on `http://localhost:8000`
 
 **NOTE**
 
