@@ -39,27 +39,24 @@ optimized with torch.compile.
 The demo was run on a single RTX 4090 GPU. WhisperFusion uses the Nvidia TensorRT-LLM library for CUDA optimized versions of popular LLM models. TensorRT-LLM supports multiple GPUs, so it should be possible to run WhisperFusion for even better performance on multiple GPUs.
 
 ## Getting Started
-- We provide a pre-built TensorRT-LLM docker container that has both whisper and
-  phi converted to TensorRT engines and WhisperSpeech model is pre-downloaded to 
-  quickly start interacting with WhisperFusion.
+We provide a Docker Compose setup to streamline the deployment of the pre-built TensorRT-LLM docker container. This setup includes both Whisper and Phi converted to TensorRT engines, and the WhisperSpeech model is pre-downloaded to quickly start interacting with WhisperFusion. Additionally, we include a simple web server for the Web GUI.
+
+- Build and Run with docker compose for RTX 3090 and RTX
 ```bash
- docker run --gpus all --shm-size 64G -p 6006:6006 -p 8888:8888 -it ghcr.io/collabora/whisperfusion:latest
+mkdir docker/scratch-space
+cp docker/scripts/build-* docker/scripts/run-whisperfusion.sh docker/scratch-space/
+
+# Set the CUDA_ARCH environment variable based on your GPU
+# Use '86-real' for RTX 3090, '89-real' for RTX 4090
+export CUDA_ARCH=86-real
+
+docker compose build
+docker compose up
 ```
 
-- Start Web GUI
-```bash
- cd examples/chatbot/html
- python -m http.server
-```
+- Start Web GUI on `https://localhost:8000`
 
-## Build Docker Image
-- We provide the docker image for cuda-architecures 89 and 90. If you have a GPU
-  with a different cuda architecture. For e.g. to build for RTX 3090 with cuda-
-  architecture 86
-```bash
- bash build.sh 86-real
-```
-This should build the `ghcr.io/collabora/whisperfusion:latest` for RTX 3090.
+**NOTE**
 
 ## Contact Us
 
