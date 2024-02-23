@@ -1,40 +1,12 @@
 version: '3.8'
 
 services:
-  build-base-image:
-    build:
-      context: ./docker/base-image
-      dockerfile: Dockerfile
-      args:
-        CUDA_ARCH: ${CUDA_ARCH:-89-real}
-    image: whisperfusion-base:latest
-    environment:
-      VERBOSE: ${VERBOSE:-true}
-    shm_size: 64G
-  
-  build-models:
-    image: whisperfusion-base:latest
-    volumes:
-      - type: bind
-        source: ./docker/scratch-space
-        target: /root/scratch-space
-    working_dir: /root/scratch-space
-    command: ./build-models.sh
-    environment:
-      VERBOSE: ${VERBOSE:-true}
-    shm_size: 64G
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: ["gpu"]
-    depends_on:
-      - build-base-image
-  
   whisperfusion:
     build:
       context: docker
       dockerfile: Dockerfile
+      args:
+        CUDA_ARCH: ${CUDA_ARCH:-89-real;90-real}
     image: whisperfusion:latest
     volumes:
       - type: bind
@@ -42,8 +14,6 @@ services:
         target: /root/scratch-space
     environment:
       VERBOSE: ${VERBOSE:-false}
-    depends_on:
-      - build-models
     ports:
       - "8888:8888"
       - "6006:6006"
@@ -52,7 +22,8 @@ services:
         reservations:
           devices:
             - capabilities: ["gpu"]
-  
+    entrypoint: ["/root/scratch-space/run-whisperfusion.sh"]
+
   nginx:
     image: nginx:latest
     volumes:

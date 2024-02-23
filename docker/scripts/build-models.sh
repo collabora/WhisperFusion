@@ -15,5 +15,3 @@ if [ ! -d "/root/scratch-space/models/dolphin-2_6-phi-2" ] || [ -z "$(ls -A /roo
 else
     echo "dolphin-2_6-phi-2 directory exists and is not empty. Skipping build-dolphin-2_6-phi-2.sh..."
 fi
-
-touch /root/scratch-space/models/done.flag

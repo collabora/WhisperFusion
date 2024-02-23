@@ -2,12 +2,11 @@
 
 test -f /etc/shinit_v2 && source /etc/shinit_v2
 
-while [ ! -f "/root/scratch-space/models/done.flag" ]; do
-  echo "Waiting for build-models to complete..."
-  sleep 10
-done
+echo "Running build-models.sh..."
+cd /root/scratch-space/
+./build-models.sh
 
-cd WhisperFusion
+cd /root/WhisperFusion
 if [ "$1" != "mistral" ]; then
   exec python3 main.py --phi \
                   --whisper_tensorrt_path /root/scratch-space/models/whisper_small_en \
