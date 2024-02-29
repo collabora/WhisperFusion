@@ -1,19 +1,19 @@
-FROM ghcr.io/collabora/whisperfusion-base:latest as base
-ARG S6_OVERLAY_VERSION=3.1.6.2
+ARG BASE_IMAGE=nvcr.io/nvidia/cuda
+ARG BASE_TAG=12.2.2-devel-ubuntu22.04
 
-RUN apt-get update && apt-get install -y nginx xz-utils
+FROM ${BASE_IMAGE}:${BASE_TAG} as base
+ARG CUDA_ARCH
+ENV CUDA_ARCH=${CUDA_ARCH}
 
-COPY resources/docker/services.d /etc/services.d
-COPY resources/docker/default /etc/nginx/sites-enabled/
+WORKDIR /root
+COPY scripts/install-deps.sh /root
+RUN bash install-deps.sh && rm install-deps.sh
+
+COPY scripts/install-trt-llm.sh /root
+RUN bash install-trt-llm.sh && rm install-trt-llm.sh
+
+RUN apt-get update && apt-get install -y xz-utils
 
 WORKDIR /root/
-COPY scripts/setup-whisperfusion.sh scripts/run-whisperfusion.sh scratch-space/models /root/
+COPY scripts/setup-whisperfusion.sh /root/
 RUN ./setup-whisperfusion.sh
-RUN cp -r /root/WhisperFusion/examples/chatbot/html /var/www/
-
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
-RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp
-RUN tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz
-
-ENTRYPOINT ["/init"]
