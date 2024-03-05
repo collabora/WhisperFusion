@@ -5,15 +5,23 @@ FROM ${BASE_IMAGE}:${BASE_TAG} as base
 ARG CUDA_ARCH
 ENV CUDA_ARCH=${CUDA_ARCH}
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    xz-utils \
+    curl \
+    git && \
+    rm -rf /var/lib/apt/lists/*
+
+FROM base as devel
 WORKDIR /root
 COPY scripts/install-deps.sh /root
 RUN bash install-deps.sh && rm install-deps.sh
+COPY scripts/build-trt-llm.sh /root
+RUN bash build-trt-llm.sh && rm build-trt-llm.sh
 
+FROM devel as release
+WORKDIR /root/
 COPY scripts/install-trt-llm.sh /root
 RUN bash install-trt-llm.sh && rm install-trt-llm.sh
-
-RUN apt-get update && apt-get install -y xz-utils
-
-WORKDIR /root/
 COPY scripts/setup-whisperfusion.sh /root/
 RUN ./setup-whisperfusion.sh

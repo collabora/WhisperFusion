@@ -29,8 +29,10 @@ services:
     volumes:
       - ./docker/resources/docker/default:/etc/nginx/conf.d/default.conf:ro
       - ./examples/chatbot/html:/var/www/html:ro
+      - ./docker/scripts/start-nginx.sh:/start-nginx.sh:ro
+
     ports:
       - "8000:80"
     depends_on:
       - whisperfusion
-    entrypoint: ["/usr/sbin/nginx", "-g", "daemon off;"]
+    entrypoint: ["/bin/bash", "/start-nginx.sh"]
