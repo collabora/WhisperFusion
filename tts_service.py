@@ -3,8 +3,10 @@ import time
 import logging
 logging.basicConfig(level = logging.INFO)
 
+from tqdm import tqdm
 from websockets.sync.server import serve
 from whisperspeech.pipeline import Pipeline
+
 
 class WhisperSpeechTTS:
     def __init__(self):
@@ -18,7 +20,7 @@ class WhisperSpeechTTS:
         # initialize and warmup model
         self.initialize_model()
         logging.info("\n[WhisperSpeech INFO:] Warming up torch compile model. Please wait ...\n")
-        for i in range(3):
+        for _ in tqdm(range(3), desc="Warming up"):
             self.pipe.generate("Hello, I am warming up.")
         logging.info("[WhisperSpeech INFO:] Warmed up Whisper Speech torch compile model. Connect to the WebGUI now.")
         should_send_server_ready.value = True
