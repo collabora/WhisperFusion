@@ -44,7 +44,7 @@ bash install_cmake.sh
 source $ENV
 bash install_ccache.sh
 # later on TensorRT-LLM will force reinstall this version anyways
-pip3 install --extra-index-url https://download.pytorch.org/whl/cu121 torch==2.1.0
+pip3 install --extra-index-url https://download.pytorch.org/whl/cu121 torch==2.1.2
 bash install_tensorrt.sh
 bash install_polygraphy.sh
 source $ENV

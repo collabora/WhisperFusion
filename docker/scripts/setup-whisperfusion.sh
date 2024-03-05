@@ -1,14 +1,14 @@
 #!/bin/bash -e
 
 ## Clone this repo and install requirements
-[ -d "WhisperFusion" ] || git clone https://github.com/collabora/WhisperFusion.git
+[ -d "WhisperFusion" ] || git clone -b optimize_docker https://github.com/makaveli10/WhisperFusion.git
 
 cd WhisperFusion
 apt update
 apt install ffmpeg portaudio19-dev -y
 
 ## Install torchaudio matching the PyTorch from the base image
-pip install --extra-index-url https://download.pytorch.org/whl/cu121 torchaudio==2.1.0
+pip install --extra-index-url https://download.pytorch.org/whl/cu121 torchaudio==2.1.2
 
 ## Install all the other dependencies normally
 pip install -r requirements.txt
