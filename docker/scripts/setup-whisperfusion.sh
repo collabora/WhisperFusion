@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 ## Clone this repo and install requirements
-[ -d "WhisperFusion" ] || git clone https://github.com/collabora/WhisperFusion.git
+[ -d "WhisperFusion" ] || git clone -b optimize_docker https://github.com/makaveli10/WhisperFusion.git
 
 cd WhisperFusion
 apt update
