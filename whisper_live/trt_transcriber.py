@@ -56,12 +56,20 @@ class WhisperEncoding:
         return session
 
     def get_audio_features(self, mel):
-        inputs = OrderedDict()
-        output_list = []
+        input_lengths = torch.tensor(
+            [mel.shape[2] // 2 for _ in range(mel.shape[0])],
+            dtype=torch.int32,
+            device=mel.device)
 
-        inputs.update({'x': mel})
-        output_list.append(
-            TensorInfo('x', str_dtype_to_trt(self.dtype), mel.shape))
+        inputs = OrderedDict()
+        inputs['x'] = mel
+        inputs['input_lengths'] = input_lengths
+
+        output_list = [
+            TensorInfo('x', str_dtype_to_trt(self.dtype), mel.shape),
+            TensorInfo('input_lengths', str_dtype_to_trt('int32'),
+                       input_lengths.shape)
+        ]
 
         output_info = (self.session).infer_shapes(output_list)
 
@@ -106,6 +114,8 @@ class WhisperDecoding:
             decoder_engine_buffer = f.read()
 
         decoder_model_config = ModelConfig(
+            max_batch_size=self.decoder_config['max_batch_size'],
+            max_beam_width=self.decoder_config['max_beam_width'],
             num_heads=self.decoder_config['num_heads'],
             num_kv_heads=self.decoder_config['num_heads'],
             hidden_size=self.decoder_config['hidden_size'],
@@ -145,7 +155,9 @@ class WhisperDecoding:
                                              dtype=torch.int32,
                                              device='cuda')
         decoder_max_input_length = torch.max(decoder_input_lengths).item()
-
+        cross_attention_mask = torch.ones(
+            [encoder_outputs.shape[0], 1,
+             encoder_outputs.shape[1]]).int().cuda()
         # generation config
         sampling_config = SamplingConfig(end_id=eot_id,
                                          pad_id=eot_id,
@@ -166,6 +178,7 @@ class WhisperDecoding:
             sampling_config,
             encoder_output=encoder_outputs,
             encoder_input_lengths=encoder_input_lengths,
+            cross_attention_mask=cross_attention_mask,
         )
         torch.cuda.synchronize()
 
