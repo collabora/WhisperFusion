@@ -14,21 +14,26 @@ import re
 import tensorrt_llm
 from tensorrt_llm.logger import logger
 from tensorrt_llm.runtime import PYTHON_BINDINGS, ModelRunner
+from tensorrt_llm.builder import get_engine_version
 
 if PYTHON_BINDINGS:
     from tensorrt_llm.runtime import ModelRunnerCpp
 
 
 def read_model_name(engine_dir: str):
-    engine_version = tensorrt_llm.runtime.engine.get_engine_version(engine_dir)
+    engine_version = get_engine_version(engine_dir)
 
     with open(Path(engine_dir) / "config.json", 'r') as f:
         config = json.load(f)
 
     if engine_version is None:
-        return config['builder_config']['name']
+        return config['builder_config']['name'], None
 
-    return config['pretrained_config']['architecture']
+    model_arch = config['pretrained_config']['architecture']
+    model_version = None
+    if model_arch == 'ChatGLMForCausalLM':
+        model_version = config['pretrained_config']['chatglm_version']
+    return model_arch, model_version
 
 
 def throttle_generator(generator, stream_interval):
@@ -42,7 +47,8 @@ def throttle_generator(generator, stream_interval):
 
 def load_tokenizer(tokenizer_dir: Optional[str] = None,
                    vocab_file: Optional[str] = None,
-                   model_name: str = 'gpt',
+                   model_name: str = 'GPTForCausalLM',
+                   model_version: Optional[str] = None,
                    tokenizer_type: Optional[str] = None):
     if vocab_file is None:
         use_fast = True
@@ -56,26 +62,31 @@ def load_tokenizer(tokenizer_dir: Optional[str] = None,
                                                   trust_remote_code=True,
                                                   tokenizer_type=tokenizer_type,
                                                   use_fast=use_fast)
+    elif model_name == 'GemmaForCausalLM':
+        from transformers import GemmaTokenizer
+
+        # Initialize tokenizer from vocab file.
+        tokenizer = GemmaTokenizer(vocab_file=vocab_file,
+                                   padding_side='left',
+                                   truncation_side='left',
+                                   legacy=False)
     else:
         # For gpt-next, directly load from tokenizer.model
-        assert model_name == 'gpt'
         tokenizer = T5Tokenizer(vocab_file=vocab_file,
                                 padding_side='left',
-                                truncation_side='left')
+                                truncation_side='left',
+                                legacy=False)
 
-    if model_name == 'qwen':
+    if model_name == 'QWenForCausalLM':
         with open(Path(tokenizer_dir) / "generation_config.json") as f:
             gen_config = json.load(f)
         chat_format = gen_config['chat_format']
-        if chat_format == 'raw':
+        if chat_format == 'raw' or chat_format == 'chatml':
             pad_id = gen_config['pad_token_id']
             end_id = gen_config['eos_token_id']
-        elif chat_format == 'chatml':
-            pad_id = tokenizer.im_end_id
-            end_id = tokenizer.im_end_id
         else:
             raise Exception(f"unknown chat format: {chat_format}")
-    elif model_name == 'glm_10b':
+    elif model_name == 'ChatGLMForCausalLM' and model_version == 'glm':
         pad_id = tokenizer.pad_token_id
         end_id = tokenizer.eop_token_id
     else:
@@ -95,11 +106,12 @@ class TensorRTLLMEngine:
         self.log_level = 'error'
         self.runtime_rank = tensorrt_llm.mpi_rank()
         logger.set_level(self.log_level)
-        model_name = read_model_name(engine_dir)
+        model_name, model_version = read_model_name(engine_dir)
         self.tokenizer, self.pad_id, self.end_id = load_tokenizer(
             tokenizer_dir=tokenizer_dir,
             vocab_file=None,
             model_name=model_name,
+            model_version=model_version,
             tokenizer_type=None,
         )
         self.prompt_template = None
