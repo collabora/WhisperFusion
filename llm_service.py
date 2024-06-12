@@ -165,7 +165,7 @@ class TensorRTLLMEngine:
                 return None
 
             inputs = output_ids[batch_idx][0][:input_lengths[batch_idx]].tolist()
-            input_text = self.tokenizer.decode(inputs)
+            input_text = self.tokenizer.decode(inputs, skip_special_tokens=True)
             output = []
             for beam in range(num_beams):
                 if transcription_queue.qsize() != 0:
@@ -175,29 +175,19 @@ class TensorRTLLMEngine:
                 output_end = sequence_lengths[batch_idx][beam]
                 outputs = output_ids[batch_idx][beam][
                     output_begin:output_end].tolist()
-                output_text = self.tokenizer.decode(outputs)
+                output_text = self.tokenizer.decode(outputs, skip_special_tokens=True)
                 output.append(output_text)
         return output
     
-    def format_prompt_qa(self, prompt, conversation_history):
-        formatted_prompt = ""
-        for user_prompt, llm_response in conversation_history:
-            formatted_prompt += f"Instruct: {user_prompt}\nOutput:{llm_response}\n"
-        return f"{formatted_prompt}Instruct: {prompt}\nOutput:"
-    
-    def format_prompt_chat(self, prompt, conversation_history):
-        formatted_prompt = ""
-        for user_prompt, llm_response in conversation_history:
-            formatted_prompt += f"Alice: {user_prompt}\nBob:{llm_response}\n"
-        return f"{formatted_prompt}Alice: {prompt}\nBob:"
-
     def format_prompt_chatml(self, prompt, conversation_history, system_prompt=""):
-        formatted_prompt = ("<|im_start|>system\n" + system_prompt + "<|im_end|>\n")
+        formatted_prompt = ""
         for user_prompt, llm_response in conversation_history:
-            formatted_prompt += f"<|im_start|>user\n{user_prompt}<|im_end|>\n"
-            formatted_prompt += f"<|im_start|>assistant\n{llm_response}<|im_end|>\n"
-        formatted_prompt += f"<|im_start|>user\n{prompt}<|im_end|>\n"
+            formatted_prompt += f"<|user|>\n{user_prompt}<|end|>\n"
+            formatted_prompt += f"<|assistant|>\n{llm_response}<|end|>\n"
+        formatted_prompt += f"<|user|>\n{prompt}<|end|>\n"
         return formatted_prompt
+
+    def f
 
     def run(
         self,
