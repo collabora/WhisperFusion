@@ -1,5 +1,5 @@
 ARG BASE_IMAGE=nvcr.io/nvidia/cuda
-ARG BASE_TAG=12.4.0-devel-ubuntu22.04
+ARG BASE_TAG=12.4.0-runtime-ubuntu22.04
 
 FROM ${BASE_IMAGE}:${BASE_TAG} as base
 ARG CUDA_ARCH
