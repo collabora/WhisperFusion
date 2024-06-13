@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 ## Clone this repo and install requirements
-[ -d "WhisperFusion" ] || git clone -b upgrade/tensorrt_llm_0_10_0 https://github.com/makaveli10/WhisperFusion.git
+[ -d "WhisperFusion" ] || git clone https://github.com/Collabora/WhisperFusion.git
 
 cd WhisperFusion
 apt update
