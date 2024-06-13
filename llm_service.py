@@ -165,7 +165,7 @@ class TensorRTLLMEngine:
                 return None
 
             inputs = output_ids[batch_idx][0][:input_lengths[batch_idx]].tolist()
-            input_text = self.tokenizer.decode(inputs, skip_special_tokens=True)
+            input_text = self.tokenizer.decode(inputs, skip_special_tokens=False)
             output = []
             for beam in range(num_beams):
                 if transcription_queue.qsize() != 0:
@@ -175,24 +175,35 @@ class TensorRTLLMEngine:
                 output_end = sequence_lengths[batch_idx][beam]
                 outputs = output_ids[batch_idx][beam][
                     output_begin:output_end].tolist()
-                output_text = self.tokenizer.decode(outputs, skip_special_tokens=True)
+                output_text = self.tokenizer.decode(outputs, skip_special_tokens=False)
                 output.append(output_text)
         return output
     
     def format_prompt_chatml(self, prompt, conversation_history, system_prompt=""):
+        messages = []
+        for user_prompt, llm_response in conversation_history:
+            messages.append({"role": "user", "content": user_prompt})
+            messages.append({"role": "assistant", "content": user_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return self.tokenizer.apply_chat_template(prompt, tokenize=False)
+
+    def format_prompt_qa(self, prompt, conversation_history):
         formatted_prompt = ""
         for user_prompt, llm_response in conversation_history:
-            formatted_prompt += f"<|user|>\n{user_prompt}<|end|>\n"
-            formatted_prompt += f"<|assistant|>\n{llm_response}<|end|>\n"
-        formatted_prompt += f"<|user|>\n{prompt}<|end|>\n"
-        return formatted_prompt
-
-    def f
+            formatted_prompt += f"Instruct: {user_prompt}\nOutput:{llm_response}\n"
+        return f"{formatted_prompt}Instruct: {prompt}\nOutput:"
+    
+    def format_prompt_chat(self, prompt, conversation_history):
+        formatted_prompt = ""
+        for user_prompt, llm_response in conversation_history:
+            formatted_prompt += f"Alice: {user_prompt}\nBob:{llm_response}\n"
+        return f"{formatted_prompt}Alice: {prompt}\nBob:"
 
     def run(
         self,
         model_path,
         tokenizer_path,
+        phi_model_type=None,
         transcription_queue=None,
         llm_queue=None,
         audio_queue=None,
@@ -203,7 +214,12 @@ class TensorRTLLMEngine:
         streaming=False,
         streaming_interval=4,
         debug=False,
-    ):
+    ):  
+        self.phi_model_type = phi_model_type
+        if self.phi_model_type == "phi-2":
+            self.chat_format = self.format_prompt_qa
+        else:
+            self.chat_format = self.format_prompt_chatml
         self.initialize_model(
             model_path,
             tokenizer_path,
@@ -242,7 +258,7 @@ class TensorRTLLMEngine:
                     continue
 
             # input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
-            input_text=[self.format_prompt_chatml(prompt, conversation_history[transcription_output["uid"]], system_prompt="You are Dolphin, a helpful AI assistant")]
+            input_text=[self.chat_format(prompt, conversation_history[transcription_output["uid"]])]
             
             self.eos = transcription_output["eos"]
 
@@ -315,7 +331,8 @@ class TensorRTLLMEngine:
             
             # if self.eos:
             if output is not None:
-                output[0] = clean_llm_output(output[0])
+                if self.phi_model_type == "phi-2":
+                    output[0] = clean_phi2_output(output[0])
                 self.last_output = output
                 self.last_prompt = prompt
                 llm_queue.put({
@@ -334,23 +351,6 @@ class TensorRTLLMEngine:
                 self.last_prompt = None
                 self.last_output = None
 
-def clean_llm_output(output):
-    output = output.replace("\n\nDolphin\n\n", "")
-    output = output.replace("\nDolphin\n\n", "")
-    output = output.replace("Dolphin: ", "")
-    output = output.replace("Assistant: ", "")
-
-    if not output.endswith('.') and not output.endswith('?') and not output.endswith('!'):
-        last_punct = output.rfind('.')
-        last_q = output.rfind('?')
-        if last_q > last_punct:
-            last_punct = last_q
-        
-        last_ex = output.rfind('!')
-        if last_ex > last_punct:
-            last_punct = last_ex
-        
-        if last_punct > 0:
-            output = output[:last_punct+1]
-
+def clean_phi2_output(output):
+    output = output.split("Instruct:")[0]
     return output
