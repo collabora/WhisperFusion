@@ -1,12 +1,8 @@
-version: '3.8'
-
 services:
   whisperfusion:
     build:
       context: docker
       dockerfile: Dockerfile
-      args:
-        CUDA_ARCH: ${CUDA_ARCH:-89-real;90-real}
     image: whisperfusion:latest
     volumes:
       - type: bind
@@ -14,6 +10,7 @@ services:
         target: /root/scratch-space
     environment:
       VERBOSE: ${VERBOSE:-false}
+      MODEL: ${MODEL:-phi-2}
     ports:
       - "8888:8888"
       - "6006:6006"
