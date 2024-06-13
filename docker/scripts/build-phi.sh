@@ -34,5 +34,5 @@ trtllm-build \
 dest=/root/scratch-space/models
 mkdir -p "$dest/$name/tokenizer"
 cp -r "$name" "$dest"
-(cd "$phi_path" && cp config.json tokenizer_config.json vocab.json merges.txt "$dest/$name/tokenizer")
+(cd "$phi_path" && cp config.json tokenizer_config.json tokenizer.json special_token_map.json added_tokens.json vocab.json merges.txt "$dest/$name/tokenizer")
 cp -r "$phi_path" "$dest/phi-orig-model"
