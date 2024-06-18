@@ -185,7 +185,7 @@ class TensorRTLLMEngine:
             messages.append({"role": "user", "content": user_prompt})
             messages.append({"role": "assistant", "content": user_prompt})
         messages.append({"role": "user", "content": prompt})
-        return self.tokenizer.apply_chat_template(prompt, tokenize=False)
+        return self.tokenizer.apply_chat_template(messages, tokenize=False)
 
     def format_prompt_qa(self, prompt, conversation_history):
         formatted_prompt = ""
@@ -208,7 +208,7 @@ class TensorRTLLMEngine:
         llm_queue=None,
         audio_queue=None,
         input_text=None, 
-        max_output_len=50, 
+        max_output_len=100, 
         max_attention_window_size=4096, 
         num_beams=1, 
         streaming=False,
@@ -259,7 +259,7 @@ class TensorRTLLMEngine:
 
             # input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
             input_text=[self.chat_format(prompt, conversation_history[transcription_output["uid"]])]
-            
+
             self.eos = transcription_output["eos"]
 
             batch_input_ids = self.parse_input(
@@ -352,5 +352,8 @@ class TensorRTLLMEngine:
                 self.last_output = None
 
 def clean_phi2_output(output):
-    output = output.split("Instruct:")[0]
-    return output
+    return output.split("Instruct:")[0]
+
+
+def clean_phi3_output(output):
+    return output.split("<|end|>")[0]
