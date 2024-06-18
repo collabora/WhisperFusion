@@ -10,7 +10,7 @@ services:
         target: /root/scratch-space
     environment:
       VERBOSE: ${VERBOSE:-false}
-      MODEL: ${MODEL:-phi-2}
+      MODEL: ${MODEL:-Phi-3-mini-4k-instruct}
     ports:
       - "8888:8888"
       - "6006:6006"
