@@ -42,6 +42,10 @@ def parse_arguments():
                         type=str,
                         default="/root/TensorRT-LLM/examples/phi/phi-2",
                         help='Phi Tokenizer path')
+    parser.add_argument('--phi_model_type',
+                        type=str,
+                        default=None,
+                        help='Phi model type')
     return parser.parse_args()
 
 
@@ -99,6 +103,7 @@ if __name__ == "__main__":
             # args.mistral_tokenizer_path,
             args.phi_tensorrt_path,
             args.phi_tokenizer_path,
+            args.phi_model_type,
             transcription_queue,
             llm_queue,
             audio_queue,

@@ -41,14 +41,13 @@ The demo was run on a single RTX 4090 GPU. WhisperFusion uses the Nvidia TensorR
 ## Getting Started
 We provide a Docker Compose setup to streamline the deployment of the pre-built TensorRT-LLM docker container. This setup includes both Whisper and Phi converted to TensorRT engines, and the WhisperSpeech model is pre-downloaded to quickly start interacting with WhisperFusion. Additionally, we include a simple web server for the Web GUI.
 
-- Build and Run with docker compose for RTX 3090 and RTX
+- Build and Run with docker compose
 ```bash
 mkdir docker/scratch-space
 cp docker/scripts/build-* docker/scripts/run-whisperfusion.sh docker/scratch-space/
 
-# Set the CUDA_ARCH environment variable based on your GPU
-# Use '86-real' for RTX 3090, '89-real' for RTX 4090
-CUDA_ARCH=86-real docker compose build
+docker compose build
+export MODEL=Phi-3-mini-4k-instruct    #Phi-3-mini-128k-instruct or phi-2, By default WhisperFusion uses phi-2
 docker compose up
 ```
 

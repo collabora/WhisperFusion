@@ -14,21 +14,26 @@ import re
 import tensorrt_llm
 from tensorrt_llm.logger import logger
 from tensorrt_llm.runtime import PYTHON_BINDINGS, ModelRunner
+from tensorrt_llm.builder import get_engine_version
 
 if PYTHON_BINDINGS:
     from tensorrt_llm.runtime import ModelRunnerCpp
 
 
 def read_model_name(engine_dir: str):
-    engine_version = tensorrt_llm.runtime.engine.get_engine_version(engine_dir)
+    engine_version = get_engine_version(engine_dir)
 
     with open(Path(engine_dir) / "config.json", 'r') as f:
         config = json.load(f)
 
     if engine_version is None:
-        return config['builder_config']['name']
+        return config['builder_config']['name'], None
 
-    return config['pretrained_config']['architecture']
+    model_arch = config['pretrained_config']['architecture']
+    model_version = None
+    if model_arch == 'ChatGLMForCausalLM':
+        model_version = config['pretrained_config']['chatglm_version']
+    return model_arch, model_version
 
 
 def throttle_generator(generator, stream_interval):
@@ -42,7 +47,8 @@ def throttle_generator(generator, stream_interval):
 
 def load_tokenizer(tokenizer_dir: Optional[str] = None,
                    vocab_file: Optional[str] = None,
-                   model_name: str = 'gpt',
+                   model_name: str = 'GPTForCausalLM',
+                   model_version: Optional[str] = None,
                    tokenizer_type: Optional[str] = None):
     if vocab_file is None:
         use_fast = True
@@ -56,26 +62,31 @@ def load_tokenizer(tokenizer_dir: Optional[str] = None,
                                                   trust_remote_code=True,
                                                   tokenizer_type=tokenizer_type,
                                                   use_fast=use_fast)
+    elif model_name == 'GemmaForCausalLM':
+        from transformers import GemmaTokenizer
+
+        # Initialize tokenizer from vocab file.
+        tokenizer = GemmaTokenizer(vocab_file=vocab_file,
+                                   padding_side='left',
+                                   truncation_side='left',
+                                   legacy=False)
     else:
         # For gpt-next, directly load from tokenizer.model
-        assert model_name == 'gpt'
         tokenizer = T5Tokenizer(vocab_file=vocab_file,
                                 padding_side='left',
-                                truncation_side='left')
+                                truncation_side='left',
+                                legacy=False)
 
-    if model_name == 'qwen':
+    if model_name == 'QWenForCausalLM':
         with open(Path(tokenizer_dir) / "generation_config.json") as f:
             gen_config = json.load(f)
         chat_format = gen_config['chat_format']
-        if chat_format == 'raw':
+        if chat_format == 'raw' or chat_format == 'chatml':
             pad_id = gen_config['pad_token_id']
             end_id = gen_config['eos_token_id']
-        elif chat_format == 'chatml':
-            pad_id = tokenizer.im_end_id
-            end_id = tokenizer.im_end_id
         else:
             raise Exception(f"unknown chat format: {chat_format}")
-    elif model_name == 'glm_10b':
+    elif model_name == 'ChatGLMForCausalLM' and model_version == 'glm':
         pad_id = tokenizer.pad_token_id
         end_id = tokenizer.eop_token_id
     else:
@@ -95,11 +106,12 @@ class TensorRTLLMEngine:
         self.log_level = 'error'
         self.runtime_rank = tensorrt_llm.mpi_rank()
         logger.set_level(self.log_level)
-        model_name = read_model_name(engine_dir)
+        model_name, model_version = read_model_name(engine_dir)
         self.tokenizer, self.pad_id, self.end_id = load_tokenizer(
             tokenizer_dir=tokenizer_dir,
             vocab_file=None,
             model_name=model_name,
+            model_version=model_version,
             tokenizer_type=None,
         )
         self.prompt_template = None
@@ -153,7 +165,7 @@ class TensorRTLLMEngine:
                 return None
 
             inputs = output_ids[batch_idx][0][:input_lengths[batch_idx]].tolist()
-            input_text = self.tokenizer.decode(inputs)
+            input_text = self.tokenizer.decode(inputs, skip_special_tokens=False)
             output = []
             for beam in range(num_beams):
                 if transcription_queue.qsize() != 0:
@@ -163,10 +175,18 @@ class TensorRTLLMEngine:
                 output_end = sequence_lengths[batch_idx][beam]
                 outputs = output_ids[batch_idx][beam][
                     output_begin:output_end].tolist()
-                output_text = self.tokenizer.decode(outputs)
+                output_text = self.tokenizer.decode(outputs, skip_special_tokens=False)
                 output.append(output_text)
         return output
     
+    def format_prompt_chatml(self, prompt, conversation_history, system_prompt=""):
+        messages = []
+        for user_prompt, llm_response in conversation_history:
+            messages.append({"role": "user", "content": user_prompt})
+            messages.append({"role": "assistant", "content": user_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return self.tokenizer.apply_chat_template(messages, tokenize=False)
+
     def format_prompt_qa(self, prompt, conversation_history):
         formatted_prompt = ""
         for user_prompt, llm_response in conversation_history:
@@ -179,29 +199,27 @@ class TensorRTLLMEngine:
             formatted_prompt += f"Alice: {user_prompt}\nBob:{llm_response}\n"
         return f"{formatted_prompt}Alice: {prompt}\nBob:"
 
-    def format_prompt_chatml(self, prompt, conversation_history, system_prompt=""):
-        formatted_prompt = ("<|im_start|>system\n" + system_prompt + "<|im_end|>\n")
-        for user_prompt, llm_response in conversation_history:
-            formatted_prompt += f"<|im_start|>user\n{user_prompt}<|im_end|>\n"
-            formatted_prompt += f"<|im_start|>assistant\n{llm_response}<|im_end|>\n"
-        formatted_prompt += f"<|im_start|>user\n{prompt}<|im_end|>\n"
-        return formatted_prompt
-
     def run(
         self,
         model_path,
         tokenizer_path,
+        phi_model_type=None,
         transcription_queue=None,
         llm_queue=None,
         audio_queue=None,
         input_text=None, 
-        max_output_len=50, 
+        max_output_len=100, 
         max_attention_window_size=4096, 
         num_beams=1, 
         streaming=False,
         streaming_interval=4,
         debug=False,
-    ):
+    ):  
+        self.phi_model_type = phi_model_type
+        if self.phi_model_type == "phi-2":
+            self.chat_format = self.format_prompt_qa
+        else:
+            self.chat_format = self.format_prompt_chatml
         self.initialize_model(
             model_path,
             tokenizer_path,
@@ -240,8 +258,8 @@ class TensorRTLLMEngine:
                     continue
 
             # input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
-            input_text=[self.format_prompt_chatml(prompt, conversation_history[transcription_output["uid"]], system_prompt="You are Dolphin, a helpful AI assistant")]
-            
+            input_text=[self.chat_format(prompt, conversation_history[transcription_output["uid"]])]
+
             self.eos = transcription_output["eos"]
 
             batch_input_ids = self.parse_input(
@@ -313,7 +331,8 @@ class TensorRTLLMEngine:
             
             # if self.eos:
             if output is not None:
-                output[0] = clean_llm_output(output[0])
+                if self.phi_model_type == "phi-2":
+                    output[0] = clean_phi2_output(output[0])
                 self.last_output = output
                 self.last_prompt = prompt
                 llm_queue.put({
@@ -332,23 +351,9 @@ class TensorRTLLMEngine:
                 self.last_prompt = None
                 self.last_output = None
 
-def clean_llm_output(output):
-    output = output.replace("\n\nDolphin\n\n", "")
-    output = output.replace("\nDolphin\n\n", "")
-    output = output.replace("Dolphin: ", "")
-    output = output.replace("Assistant: ", "")
+def clean_phi2_output(output):
+    return output.split("Instruct:")[0]
 
-    if not output.endswith('.') and not output.endswith('?') and not output.endswith('!'):
-        last_punct = output.rfind('.')
-        last_q = output.rfind('?')
-        if last_q > last_punct:
-            last_punct = last_q
-        
-        last_ex = output.rfind('!')
-        if last_ex > last_punct:
-            last_punct = last_ex
-        
-        if last_punct > 0:
-            output = output[:last_punct+1]
 
-    return output
+def clean_phi3_output(output):
+    return output.split("<|end|>")[0]
