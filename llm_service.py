@@ -165,7 +165,7 @@ class TensorRTLLMEngine:
                 return None
 
             inputs = output_ids[batch_idx][0][:input_lengths[batch_idx]].tolist()
-            input_text = self.tokenizer.decode(inputs, skip_special_tokens=False)
+            input_text = self.tokenizer.decode(inputs, skip_special_tokens=True)
             output = []
             for beam in range(num_beams):
                 if transcription_queue.qsize() != 0:
@@ -175,17 +175,16 @@ class TensorRTLLMEngine:
                 output_end = sequence_lengths[batch_idx][beam]
                 outputs = output_ids[batch_idx][beam][
                     output_begin:output_end].tolist()
-                output_text = self.tokenizer.decode(outputs, skip_special_tokens=False)
+                output_text = self.tokenizer.decode(outputs, skip_special_tokens=True)
                 output.append(output_text)
         return output
-    
+
     def format_prompt_chatml(self, prompt, conversation_history, system_prompt=""):
         messages = []
+        formatted_prompt = ""
         for user_prompt, llm_response in conversation_history:
-            messages.append({"role": "user", "content": user_prompt})
-            messages.append({"role": "assistant", "content": user_prompt})
-        messages.append({"role": "user", "content": prompt})
-        return self.tokenizer.apply_chat_template(messages, tokenize=False)
+            formatted_prompt += f"<|user|>\n{user_prompt}<|end|>\n<|assistant|>\n{llm_response}<|end|>\n"
+        return f"{formatted_prompt}<|user|>\n{prompt}<|end|>\n<|assistant|>" 
 
     def format_prompt_qa(self, prompt, conversation_history):
         formatted_prompt = ""
@@ -257,9 +256,7 @@ class TensorRTLLMEngine:
                     )
                     continue
 
-            # input_text=[self.format_prompt_qa(prompt, conversation_history[transcription_output["uid"]])]
             input_text=[self.chat_format(prompt, conversation_history[transcription_output["uid"]])]
-
             self.eos = transcription_output["eos"]
 
             batch_input_ids = self.parse_input(
@@ -270,7 +267,6 @@ class TensorRTLLMEngine:
             )
 
             input_lengths = [x.size(0) for x in batch_input_ids]
-
             logging.info(f"[LLM INFO:] Running LLM Inference with WhisperLive prompt: {prompt}, eos: {self.eos}")
             start = time.time()
             with torch.no_grad():
@@ -332,7 +328,8 @@ class TensorRTLLMEngine:
             # if self.eos:
             if output is not None:
                 if self.phi_model_type == "phi-2":
-                    output[0] = clean_phi2_output(output[0])
+                    output[0] = output.split("Instruct:")[0]
+
                 self.last_output = output
                 self.last_prompt = prompt
                 llm_queue.put({
@@ -350,10 +347,3 @@ class TensorRTLLMEngine:
                 )
                 self.last_prompt = None
                 self.last_output = None
-
-def clean_phi2_output(output):
-    return output.split("Instruct:")[0]
-
-
-def clean_phi3_output(output):
-    return output.split("<|end|>")[0]

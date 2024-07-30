@@ -32,7 +32,12 @@ trtllm-build \
     --pp_size 1
 
 dest=/root/scratch-space/models
+if [ -d "$dest/$name" ]; then
+    rm -rf "$dest/$name"
+fi
 mkdir -p "$dest/$name/tokenizer"
 cp -r "$name" "$dest"
-(cd "$phi_path" && cp config.json tokenizer_config.json tokenizer.json special_tokens_map.json added_tokens.json vocab.json merges.txt "$dest/$name/tokenizer")
-cp -r "$phi_path" "$dest/phi-orig-model"
+(cd "$phi_path" && cp config.json tokenizer_config.json tokenizer.json special_tokens_map.json added_tokens.json "$dest/$name/tokenizer")
+if [ "$MODEL_TYPE" == "phi-2" ]; then
+    (cd "$phi_path" && cp vocab.json merges.txt "$dest/$name/tokenizer")
+fi
